@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use core::ops::Sub;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -62,14 +63,14 @@ impl Region {
 }
 
 pub struct SpotDB {
-    pub spots: Vec<Arc<Spot>>,
-    pub regions: Vec<Region>,
+    spots: Vec<Arc<Spot>>,
+    regions: HashMap<String, Region>,
 }
 
 impl SpotDB {
     pub fn new() -> Self {
         let spots = Vec::new();
-        let regions = Vec::new();
+        let regions = HashMap::new();
         Self { spots, regions }
     }
 
@@ -108,46 +109,60 @@ impl SpotDB {
         self.spots = active;
         self.regions
             .iter_mut()
-            .for_each(|r| r.remove_spots(&expired));
+            .for_each(|(_, r)| r.remove_spots(&expired));
         Ok(())
     }
     pub fn spots_in_db(&self) -> usize {
         self.spots.len()
+    }
+
+    pub fn add_region(&mut self, name: String, prefixes: Vec<String>) {
+        let r = Region::new(name.clone(), prefixes);
+        self.regions.insert(name, r);
+    }
+
+    pub fn get_region(&self, name: &str) -> Option<&Region> {
+        self.regions.get(name)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::{fixture, rstest};
 
-    #[test]
+    #[fixture]
+    fn empty_db() -> SpotDB {
+        let db = SpotDB::new();
+        db
+    }
+
+    #[rstest]
     fn init_db() {
         let db = SpotDB::new();
         assert_eq!(db.spots_in_db(), 0);
     }
 
-    #[test]
-    fn db_add_spot() {
-        let mut db = SpotDB::new();
-        db.add_spot("HB9HUS", "HB9CL", 18080.0, "CW", 10, 25, "CQ", Utc::now());
-        assert_eq!(db.spots_in_db(), 1);
+    #[rstest]
+    fn db_add_spot(mut empty_db: SpotDB) {
+        empty_db.add_spot("HB9HUS", "HB9CL", 18080.0, "CW", 10, 25, "CQ", Utc::now());
+        assert_eq!(empty_db.spots_in_db(), 1);
     }
 
-    #[test]
-    fn db_cleanup() {
-        let mut db = SpotDB::new();
-        db.add_spot(
-            "HB9HUS",
-            "HB9CL",
-            18080.0,
-            "CW",
-            10,
-            25,
-            "CQ",
-            Utc::now() - Duration::from_secs(3600),
-        );
-        let res = db.cleanup_old_spots(Duration::from_secs(1000));
+    #[rstest]
+    fn db_cleanup(mut empty_db: SpotDB) {
+        let earlier = Utc::now() - Duration::from_secs(3600);
+        empty_db.add_spot("HB9HUS", "HB9CL", 18080.0, "CW", 10, 25, "CQ", earlier);
+        let res = empty_db.cleanup_old_spots(Duration::from_secs(1000));
         assert!(res.is_ok());
-        assert_eq!(db.spots_in_db(), 0);
+        assert_eq!(empty_db.spots_in_db(), 0);
+    }
+
+    #[rstest]
+    fn db_add_region(mut empty_db: SpotDB) {
+        let prefixes = vec!["HB".to_string(), "DL".to_string(), "F".to_string()];
+        empty_db.add_region("europe".to_string(), prefixes);
+        let r = empty_db.get_region("europe");
+        assert!(r.is_some());
     }
 }
