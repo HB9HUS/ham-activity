@@ -5,6 +5,13 @@ use std::{fs, path::Path};
 pub struct Config {
     pub host: String,
     pub port: i32,
+    pub db: DB,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DB {
+    pub cleanup_period_secs: u64,
+    pub max_spot_age_secs: u64,
 }
 
 pub fn load_config<P: AsRef<Path>>(path: P) -> Result<Config, String> {

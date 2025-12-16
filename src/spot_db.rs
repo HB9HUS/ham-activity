@@ -99,8 +99,8 @@ impl SpotDB {
         self.spots.push(s);
     }
 
-    pub fn cleanup_old_spots(&mut self, timeout: Duration) -> Result<()> {
-        let cutoff = Utc::now().sub(timeout);
+    pub fn cleanup_old_spots(&mut self, max_spot_age: Duration) {
+        let cutoff = Utc::now().sub(max_spot_age);
         let (expired, active) = self
             .spots
             .iter()
@@ -110,8 +110,8 @@ impl SpotDB {
         self.regions
             .iter_mut()
             .for_each(|(_, r)| r.remove_spots(&expired));
-        Ok(())
     }
+
     pub fn spots_in_db(&self) -> usize {
         self.spots.len()
     }
@@ -153,13 +153,12 @@ mod tests {
     fn db_cleanup(mut empty_db: SpotDB) {
         let earlier = Utc::now() - Duration::from_secs(3600);
         empty_db.add_spot("HB9HUS", "HB9CL", 18080.0, "CW", 10, 25, "CQ", earlier);
-        let res = empty_db.cleanup_old_spots(Duration::from_secs(1000));
-        assert!(res.is_ok());
+        empty_db.cleanup_old_spots(Duration::from_secs(1000));
         assert_eq!(empty_db.spots_in_db(), 0);
     }
 
     #[rstest]
-    fn db_add_region(mut empty_db: SpotDB) {
+    fn db_add_get_region(mut empty_db: SpotDB) {
         let prefixes = vec!["HB".to_string(), "DL".to_string(), "F".to_string()];
         empty_db.add_region("europe".to_string(), prefixes);
         let r = empty_db.get_region("europe");
