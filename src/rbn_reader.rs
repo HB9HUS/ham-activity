@@ -109,8 +109,8 @@ pub async fn read_rbn(db_lock: Arc<RwLock<spot_db::SpotDB>>) -> Result<()> {
                     if let Ok(ts) = parse_hhmmz_to_utc(&s.utc_time, n.year(), n.month(), n.day()) {
                         if let Ok(mut db) = db_lock.write() {
                             db.add_spot(
-                                s.spotter, s.spotted, s.freq_khz, s.mode, s.snr_db, s.wpm, s.msg,
-                                ts,
+                                &s.spotter, &s.spotted, s.freq_khz, &s.mode, s.snr_db, s.wpm,
+                                &s.msg, ts,
                             );
                         } else {
                             bail!("lock error")

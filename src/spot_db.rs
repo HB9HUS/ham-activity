@@ -75,23 +75,23 @@ impl SpotDB {
 
     pub fn add_spot(
         &mut self,
-        spotter: String,
-        spotted: String,
+        spotter: &str,
+        spotted: &str,
         freq_khz: f64,
-        mode: String,
+        mode: &str,
         snr_db: u32,
         wpm: u32,
-        msg: String,
+        msg: &str,
         timestamp: DateTime<Utc>,
     ) {
         let spot = Spot {
-            spotter,
-            spotted,
+            spotter: spotter.to_string(),
+            spotted: spotted.to_string(),
             freq_khz,
-            mode,
+            mode: mode.to_string(),
             snr_db,
             wpm,
-            msg,
+            msg: msg.to_string(),
             timestamp,
         };
         let s = Arc::new(spot);
@@ -123,6 +123,31 @@ mod tests {
     #[test]
     fn init_db() {
         let db = SpotDB::new();
+        assert_eq!(db.spots_in_db(), 0);
+    }
+
+    #[test]
+    fn db_add_spot() {
+        let mut db = SpotDB::new();
+        db.add_spot("HB9HUS", "HB9CL", 18080.0, "CW", 10, 25, "CQ", Utc::now());
+        assert_eq!(db.spots_in_db(), 1);
+    }
+
+    #[test]
+    fn db_cleanup() {
+        let mut db = SpotDB::new();
+        db.add_spot(
+            "HB9HUS",
+            "HB9CL",
+            18080.0,
+            "CW",
+            10,
+            25,
+            "CQ",
+            Utc::now() - Duration::from_secs(3600),
+        );
+        let res = db.cleanup_old_spots(Duration::from_secs(1000));
+        assert!(res.is_ok());
         assert_eq!(db.spots_in_db(), 0);
     }
 }
