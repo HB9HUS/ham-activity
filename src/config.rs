@@ -3,13 +3,19 @@ use std::{fs, path::Path};
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub host: String,
-    pub port: i32,
-    pub db: DB,
+    pub rbn: RBNConfig,
+    pub db: DBConfig,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct DB {
+pub struct RBNConfig {
+    pub callsign: String,
+    pub host: String,
+    pub port: i32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DBConfig {
     pub cleanup_period_secs: u64,
     pub max_spot_age_secs: u64,
 }

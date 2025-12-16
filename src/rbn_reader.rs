@@ -1,3 +1,4 @@
+use crate::config;
 use crate::line_source::{MockTelnet, RealTelnet, TEST_DATA};
 use crate::spot_db;
 use anyhow::{bail, Result};
@@ -86,14 +87,12 @@ fn parse_spot_split(line: &str) -> Option<SpotInfo> {
     })
 }
 
-pub async fn read_rbn(db_lock: Arc<RwLock<spot_db::SpotDB>>) -> Result<()> {
-    //let host = "telnet.reversebeacon.net";
-    //let port = 7000;
-    // let mut rbn = RealTelnet::connect(host, port)?;
+pub async fn read_rbn(db_lock: Arc<RwLock<spot_db::SpotDB>>, cfg: config::RBNConfig) -> Result<()> {
+    // let mut rbn = RealTelnet::connect(cfg.host, cfg.port)?;
     let mut rbn = MockTelnet::from_bytes(TEST_DATA.as_bytes());
 
     // send callsign
-    let callsign = "HB9HUS\r\n";
+    let callsign = format!("{}\r\n", cfg.callsign);
     rbn.write_all(callsign.as_bytes())?;
     rbn.flush()?;
 

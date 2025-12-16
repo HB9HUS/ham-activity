@@ -26,7 +26,7 @@ struct Cli {
     config: PathBuf,
 }
 
-async fn periodic_cleaner(db_lock: Arc<RwLock<spot_db::SpotDB>>, db_cfg: config::DB) {
+async fn periodic_cleaner(db_lock: Arc<RwLock<spot_db::SpotDB>>, db_cfg: config::DBConfig) {
     let cleanup_period = Duration::from_secs(db_cfg.cleanup_period_secs);
     let max_spot_age = Duration::from_secs(db_cfg.max_spot_age_secs);
     loop {
@@ -53,7 +53,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let db = Arc::new(RwLock::new(spot_db::SpotDB::new()));
     spawn(rest_api::serve(db.clone()));
     spawn(periodic_cleaner(db.clone(), cfg.db));
-    rbn_reader::read_rbn(db.clone()).await?;
+    rbn_reader::read_rbn(db.clone(), cfg.rbn).await?;
 
     if let Ok(d) = db.read() {
         println!("spots: {}", d.spots_in_db());
