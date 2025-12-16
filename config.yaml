@@ -1,0 +1,5 @@
+host: "telnet.reversebeacon.net"
+port: 7000
+db:
+  cleanup_period_secs: 900
+  max_spot_age_secs: 1800
