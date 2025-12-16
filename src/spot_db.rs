@@ -1,26 +1,8 @@
-use anyhow::Result;
 use chrono::{DateTime, Utc};
 use core::ops::Sub;
-use dashmap::DashMap;
-use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-
-static CALLSIGNS: Lazy<DashMap<String, Arc<str>>> = Lazy::new(DashMap::new);
-
-fn intern(cs: &str) -> Arc<str> {
-    // `entry` gives us the “insert‑if‑absent” semantics without a lock.
-    let entry = CALLSIGNS.entry(cs.to_owned());
-    match entry {
-        dashmap::mapref::entry::Entry::Occupied(o) => o.get().clone(),
-        dashmap::mapref::entry::Entry::Vacant(v) => {
-            let arc: Arc<str> = Arc::from(cs);
-            v.insert(arc.clone());
-            arc
-        }
-    }
-}
 
 #[derive(Debug, PartialEq)]
 struct Spot {
@@ -53,7 +35,9 @@ impl Region {
         self.prefixes.iter().any(|p| callsign.starts_with(p))
     }
     pub fn add_spot(&mut self, spot: Arc<Spot>) {
-        self.spots.push(spot);
+        if self.match_callsign(&spot.spotted) {
+            self.spots.push(spot);
+        }
     }
     pub fn remove_spots(&mut self, spots: &Vec<Arc<Spot>>) {
         spots
@@ -96,7 +80,10 @@ impl SpotDB {
             timestamp,
         };
         let s = Arc::new(spot);
-        self.spots.push(s);
+        self.spots.push(s.clone());
+        self.regions
+            .iter_mut()
+            .for_each(|(_, r)| r.add_spot(s.clone()));
     }
 
     pub fn cleanup_old_spots(&mut self, max_spot_age: Duration) {
@@ -162,6 +149,22 @@ mod tests {
         let prefixes = vec!["HB".to_string(), "DL".to_string(), "F".to_string()];
         empty_db.add_region("europe".to_string(), prefixes);
         let r = empty_db.get_region("europe");
-        assert!(r.is_some());
+        if let Some(reg) = r {
+            assert_eq!(reg.name, "europe")
+        } else {
+            panic!("did not get a region")
+        }
+    }
+    #[rstest]
+    fn db_add_spot_to_region(mut empty_db: SpotDB) {
+        let prefixes = vec!["HB".to_string(), "DL".to_string(), "F".to_string()];
+        empty_db.add_region("europe".to_string(), prefixes);
+        empty_db.add_spot("HB9HUS", "DL1ABC", 18080.0, "CW", 10, 25, "CQ", Utc::now());
+        let r = empty_db.get_region("europe");
+        if let Some(reg) = r {
+            assert_eq!(reg.spots.len(), 1)
+        } else {
+            panic!("did not get a region")
+        }
     }
 }
