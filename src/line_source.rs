@@ -31,7 +31,8 @@ impl RealTelnet {
 
     /// Send the initial callsign (or any other command) to the server.
     pub fn send_callsign(&mut self, callsign: &str) -> io::Result<()> {
-        self.stream.write_all(callsign.as_bytes())?;
+        let cs = format!("{}\r\n", callsign);
+        self.stream.write_all(cs.as_bytes())?;
         self.stream.flush()
     }
 }

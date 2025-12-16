@@ -92,9 +92,7 @@ pub async fn read_rbn(db_lock: Arc<RwLock<spot_db::SpotDB>>, cfg: config::RBNCon
     let mut rbn = MockTelnet::from_bytes(TEST_DATA.as_bytes());
 
     // send callsign
-    let callsign = format!("{}\r\n", cfg.callsign);
-    rbn.write_all(callsign.as_bytes())?;
-    rbn.flush()?;
+    rbn.send_callsign(&cfg.callsign)?;
 
     let mut line = String::new();
     loop {
