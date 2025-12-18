@@ -38,6 +38,10 @@ async fn periodic_cleaner(shared_db: spot_db::SharedDB, db_cfg: config::DBConfig
 fn load_regions(shared_db: spot_db::SharedDB, regions: Vec<region_loader::Dxcc>) {
     let mut db = shared_db.write();
     for region in &regions {
+        // any dxcc that has validEnd set is not relevant for us
+        if region.valid_end.len() > 0 {
+            continue;
+        }
         let prefixes = region.prefix.split(",").map(|s| s.to_string()).collect();
         db.add_region(region.name.to_string(), prefixes);
     }

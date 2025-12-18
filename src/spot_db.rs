@@ -21,7 +21,7 @@ pub struct Spot {
 
 pub struct Region {
     pub name: String,
-    pub spots: Vec<Arc<Spot>>,
+    pub spotter_spots: Vec<Arc<Spot>>,
     pub prefixes: Vec<String>,
 }
 
@@ -30,7 +30,7 @@ impl Region {
         let spots = Vec::new();
         Self {
             name,
-            spots,
+            spotter_spots: spots,
             prefixes,
         }
     }
@@ -38,14 +38,14 @@ impl Region {
         self.prefixes.iter().any(|p| callsign.starts_with(p))
     }
     pub fn add_spot(&mut self, spot: Arc<Spot>) {
-        if self.match_callsign(&spot.spotted) {
-            self.spots.push(spot);
+        if self.match_callsign(&spot.spotter) {
+            self.spotter_spots.push(spot);
         }
     }
     pub fn remove_spots(&mut self, spots: &Vec<Arc<Spot>>) {
         spots
             .iter()
-            .for_each(|remove_spot| self.spots.retain(|s| *s != *remove_spot));
+            .for_each(|remove_spot| self.spotter_spots.retain(|s| *s != *remove_spot));
     }
 }
 
@@ -104,6 +104,10 @@ impl SpotDB {
 
     pub fn spots_in_db(&self) -> usize {
         self.spots.len()
+    }
+
+    pub fn regions_in_db(&self) -> usize {
+        self.regions.len()
     }
 
     pub fn add_region(&mut self, name: String, prefixes: Vec<String>) {
@@ -165,7 +169,7 @@ mod tests {
         empty_db.add_spot("HB9HUS", "DL1ABC", 18080.0, "CW", 10, 25, "CQ", Utc::now());
         let r = empty_db.get_region("europe");
         if let Some(reg) = r {
-            assert_eq!(reg.spots.len(), 1)
+            assert_eq!(reg.spotter_spots.len(), 1)
         } else {
             panic!("did not get a region")
         }

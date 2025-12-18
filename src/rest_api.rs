@@ -9,12 +9,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DBStats {
     pub total_spots: usize,
+    pub total_regions: usize,
 }
 
 async fn get_db_stats(shared_db: SharedDB) -> Result<impl warp::Reply, warp::Rejection> {
     let db = shared_db.read();
     let stats = DBStats {
         total_spots: db.spots_in_db(),
+        total_regions: db.regions_in_db(),
     };
     Ok(warp::reply::json(&stats))
 }
@@ -22,7 +24,7 @@ async fn get_db_stats(shared_db: SharedDB) -> Result<impl warp::Reply, warp::Rej
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Region {
     pub name: String,
-    pub num_spots: usize,
+    pub num_spotter_spots: usize,
 }
 
 async fn get_region(
@@ -33,7 +35,7 @@ async fn get_region(
     if let Some(r) = db.get_region(&name) {
         let region = Region {
             name,
-            num_spots: r.spots.len(),
+            num_spotter_spots: r.spotter_spots.len(),
         };
         Ok(warp::reply::json(&region))
     } else {

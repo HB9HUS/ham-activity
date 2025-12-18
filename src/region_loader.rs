@@ -46,7 +46,7 @@ pub struct Dxcc {
     third_party_traffic: bool,
 
     #[serde(rename = "validEnd")]
-    valid_end: String,
+    pub valid_end: String,
 
     #[serde(rename = "validStart")]
     valid_start: String,
