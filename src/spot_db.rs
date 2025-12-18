@@ -9,13 +9,13 @@ pub type SharedDB = shared::Shared<SpotDB>;
 
 #[derive(Debug, PartialEq)]
 pub struct Spot {
-    spotter: String,   // e.g. "G4IRN"
-    spotted: String,   // spotted callsign
-    pub freq_khz: f64, // frequency in kHz (or MHz – whatever the cluster reports)
-    mode: String,      // CW, SSB, FT8 …
-    snr_db: u32,       // signal‑to‑noise ratio, dB
-    wpm: u32,          // words‑per‑minute
-    msg: String,       // usually "CQ"
+    pub spotter: String, // e.g. "G4IRN"
+    pub spotted: String, // spotted callsign
+    pub freq_khz: f64,   // frequency in kHz (or MHz – whatever the cluster reports)
+    mode: String,        // CW, SSB, FT8 …
+    snr_db: i32,         // signal‑to‑noise ratio, dB
+    wpm: u32,            // words‑per‑minute
+    msg: String,         // usually "CQ"
     pub timestamp: DateTime<Utc>,
 }
 
@@ -50,6 +50,7 @@ impl Region {
 }
 
 pub struct SpotDB {
+    pub init_timestamp: DateTime<Utc>,
     spots: Vec<Arc<Spot>>,
     regions: HashMap<String, Region>,
 }
@@ -58,7 +59,11 @@ impl SpotDB {
     pub fn new() -> Self {
         let spots = Vec::new();
         let regions = HashMap::new();
-        Self { spots, regions }
+        Self {
+            init_timestamp: Utc::now(),
+            spots,
+            regions,
+        }
     }
 
     pub fn add_spot(
@@ -67,7 +72,7 @@ impl SpotDB {
         spotted: &str,
         freq_khz: f64,
         mode: &str,
-        snr_db: u32,
+        snr_db: i32,
         wpm: u32,
         msg: &str,
         timestamp: DateTime<Utc>,
@@ -117,6 +122,22 @@ impl SpotDB {
 
     pub fn get_region(&self, name: &str) -> Option<&Region> {
         self.regions.get(name)
+    }
+
+    pub fn get_regions(&self) -> Vec<&Region> {
+        self.regions.iter().map(|(_, r)| r).collect()
+    }
+
+    pub fn get_frequency_users(&self, freq_khz: f64) -> Vec<String> {
+        let mut callsigns: Vec<String> = self
+            .spots
+            .iter()
+            .filter(|&s| (freq_khz + 0.2) >= s.freq_khz && (freq_khz - 0.2) <= s.freq_khz)
+            .map(|s| s.spotted.clone())
+            .collect();
+        callsigns.sort_unstable();
+        callsigns.dedup();
+        callsigns
     }
 }
 

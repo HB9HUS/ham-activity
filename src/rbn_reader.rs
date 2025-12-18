@@ -12,7 +12,7 @@ struct SpotInfo {
     freq_khz: f64,
     spotted: String,
     mode: String,
-    snr_db: u32,
+    snr_db: i32,
     wpm: u32,
     msg: String,
     utc_time: String,
@@ -67,7 +67,7 @@ fn parse_spot_split(line: &str) -> Option<SpotInfo> {
 
     let mode = parts.next()?.to_string();
 
-    let snr_db: u32 = parts.next()?.parse().ok()?;
+    let snr_db: i32 = parts.next()?.parse().ok()?;
     // skip the “dB” token
     if parts.next()? != "dB" {
         return None;
@@ -127,7 +127,6 @@ pub async fn read_rbn(shared_db: SharedDB, cfg: config::RBNConfig) -> Result<()>
                             &s.spotter, &s.spotted, s.freq_khz, &s.mode, s.snr_db, s.wpm, &s.msg,
                             ts,
                         );
-                        println!("added spot {line}");
                     }
                 } else {
                     eprintln!("could not parse line: {line}");

@@ -17,7 +17,7 @@ pub struct Dxcc {
     country_code: String,
 
     /// CQ zones that belong to the entity
-    cq: Vec<u8>,
+    pub cq: Vec<u8>,
 
     deleted: bool,
 

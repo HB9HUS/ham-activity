@@ -32,6 +32,7 @@ async fn periodic_cleaner(shared_db: spot_db::SharedDB, db_cfg: config::DBConfig
     let max_spot_age = Duration::from_secs(db_cfg.max_spot_age_secs);
     loop {
         thread::sleep(cleanup_period);
+        println!("running periodic cleaner");
         let mut db = shared_db.write();
         db.cleanup_old_spots(max_spot_age);
     }
@@ -43,8 +44,26 @@ fn load_regions(shared_db: spot_db::SharedDB, regions: Vec<region_loader::Dxcc>)
         if region.valid_end.len() > 0 {
             continue;
         }
-        let prefixes = region.prefix.split(",").map(|s| s.to_string()).collect();
-        db.add_region(region.name.to_string(), prefixes);
+        let prefixes: Vec<String> = region.prefix.split(",").map(|s| s.to_string()).collect();
+        db.add_region(
+            region
+                .name
+                .to_lowercase()
+                .replace(char::is_whitespace, "_")
+                .to_string(),
+            prefixes.clone(),
+        );
+        for cq in region.cq.clone() {
+            let cq_name = format!("CQ_{cq}");
+            match db.get_region(&cq_name) {
+                Some(r) => {
+                    let mut new_prefixes = prefixes.clone();
+                    new_prefixes.append(&mut r.prefixes.clone());
+                    db.add_region(cq_name, new_prefixes);
+                }
+                None => db.add_region(cq_name, prefixes.clone()),
+            }
+        }
     }
 }
 

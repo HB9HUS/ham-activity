@@ -19,7 +19,7 @@ impl Band {
 }
 pub const HF_BANDS: &[Band] = &[
     Band::new(1_800, 2_000, "160m"),
-    Band::new(3_500, 4, "80m"),
+    Band::new(3_500, 4_000, "80m"),
     Band::new(7_000, 7_200, "40m"),
     Band::new(10_100, 10_150, "30m"),
     Band::new(14_000, 14_350, "20m"),
