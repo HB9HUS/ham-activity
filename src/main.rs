@@ -5,6 +5,7 @@ use std::thread;
 use std::time::Duration;
 use tokio::spawn;
 
+mod bands;
 mod config;
 mod line_source;
 mod rbn_reader;

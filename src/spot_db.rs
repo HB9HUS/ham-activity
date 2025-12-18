@@ -9,14 +9,14 @@ pub type SharedDB = shared::Shared<SpotDB>;
 
 #[derive(Debug, PartialEq)]
 pub struct Spot {
-    spotter: String, // e.g. "G4IRN"
-    spotted: String, // spotted callsign
-    freq_khz: f64,   // frequency in kHz (or MHz – whatever the cluster reports)
-    mode: String,    // CW, SSB, FT8 …
-    snr_db: u32,     // signal‑to‑noise ratio, dB
-    wpm: u32,        // words‑per‑minute
-    msg: String,     // usually "CQ"
-    timestamp: DateTime<Utc>,
+    spotter: String,   // e.g. "G4IRN"
+    spotted: String,   // spotted callsign
+    pub freq_khz: f64, // frequency in kHz (or MHz – whatever the cluster reports)
+    mode: String,      // CW, SSB, FT8 …
+    snr_db: u32,       // signal‑to‑noise ratio, dB
+    wpm: u32,          // words‑per‑minute
+    msg: String,       // usually "CQ"
+    pub timestamp: DateTime<Utc>,
 }
 
 pub struct Region {
