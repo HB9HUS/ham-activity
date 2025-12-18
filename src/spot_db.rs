@@ -1,8 +1,11 @@
+use crate::shared;
 use chrono::{DateTime, Utc};
 use core::ops::Sub;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+
+pub type SharedDB = shared::Shared<SpotDB>;
 
 #[derive(Debug, PartialEq)]
 struct Spot {

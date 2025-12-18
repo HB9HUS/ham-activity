@@ -11,7 +11,7 @@ pub struct Config {
 pub struct RBNConfig {
     pub callsign: String,
     pub host: String,
-    pub port: i32,
+    pub port: u16,
 }
 
 #[derive(Debug, Deserialize)]

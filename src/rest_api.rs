@@ -1,48 +1,66 @@
-use std::convert::Infallible;
-use std::net::SocketAddr;
+use warp;
+use warp::Filter;
 
-use http_body_util::Full;
-use hyper::body::Bytes;
-use hyper::server::conn::http1;
-use hyper::service::service_fn;
-use hyper::{Request, Response};
-use hyper_util::rt::TokioIo;
-use std::sync::Arc;
-use std::sync::RwLock;
-use tokio::net::TcpListener;
+use crate::spot_db::SharedDB;
 
-use crate::spot_db::SpotDB;
+use serde::{Deserialize, Serialize};
 
-async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
-    Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct DBStats {
+    pub total_spots: usize,
 }
 
-pub async fn serve(
-    db: Arc<RwLock<SpotDB>>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+async fn get_db_stats(shared_db: SharedDB) -> Result<impl warp::Reply, warp::Rejection> {
+    let db = shared_db.read();
+    let stats = DBStats {
+        total_spots: db.spots_in_db(),
+    };
+    Ok(warp::reply::json(&stats))
+}
 
-    // We create a TcpListener and bind it to 127.0.0.1:3000
-    let listener = TcpListener::bind(addr).await?;
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Region {
+    pub name: String,
+}
 
-    // We start a loop to continuously accept incoming connections
-    loop {
-        let (stream, _) = listener.accept().await?;
+async fn get_region(name: String, db: SharedDB) -> Result<impl warp::Reply, warp::Rejection> {
+    // For simplicity, let's say we are returning a static post
+    let region = Region { name };
+    Ok(warp::reply::json(&region))
+}
 
-        // Use an adapter to access something implementing `tokio::io` traits as if they implement
-        // `hyper::rt` IO traits.
-        let io = TokioIo::new(stream);
+fn get_region_route(
+    db: SharedDB,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::path!("region" / String)
+        .and(warp::get())
+        .and(with_db(db))
+        .and_then(get_region)
+}
 
-        // Spawn a tokio task to serve multiple connections concurrently
-        tokio::task::spawn(async move {
-            // Finally, we bind the incoming connection to our `hello` service
-            if let Err(err) = http1::Builder::new()
-                // `service_fn` converts our function in a `Service`
-                .serve_connection(io, service_fn(hello))
-                .await
-            {
-                eprintln!("Error serving connection: {:?}", err);
-            }
-        });
-    }
+fn get_db_stats_route(
+    db: SharedDB,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::path!("stats")
+        .and(warp::get())
+        .and(with_db(db))
+        .and_then(get_db_stats)
+}
+
+pub fn routes(
+    db: SharedDB,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    get_region_route(db.clone()).or(get_db_stats_route(db.clone()))
+}
+
+fn with_db(
+    db: SharedDB,
+) -> impl Filter<Extract = (SharedDB,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || db.clone())
+}
+
+pub async fn serve(db: SharedDB) {
+    let routes = routes(db);
+    println!("Server started at http://localhost:8000");
+    warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
 }

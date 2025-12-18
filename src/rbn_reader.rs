@@ -1,12 +1,10 @@
 use crate::config;
 use crate::line_source::{MockTelnet, RealTelnet, TEST_DATA};
-use crate::spot_db;
-use anyhow::{bail, Result};
+use crate::spot_db::SharedDB;
+use anyhow::{anyhow, bail, Result};
 use chrono::LocalResult::Single;
-use chrono::{DateTime, Datelike, TimeZone, Utc};
-use std::io::{BufRead, Write};
-use std::sync::Arc;
-use std::sync::RwLock;
+use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
+use std::io::BufRead;
 
 struct SpotInfo {
     spotter: String,
@@ -19,13 +17,24 @@ struct SpotInfo {
     utc_time: String,
 }
 
-pub fn parse_hhmmz_to_utc(hhmmz: &str, y: i32, m: u32, d: u32) -> Result<DateTime<Utc>> {
+pub fn parse_hhmmz_to_utc(hhmmz: &str) -> Result<DateTime<Utc>> {
     if hhmmz.len() != 5 {
         bail!("String malformed, expect hhmmz, got {}", hhmmz);
     }
-    let hr = hhmmz[0..2].parse()?;
-    let min = hhmmz[2..4].parse()?;
-    if let Single(t) = Utc.with_ymd_and_hms(y, m, d, hr, min, 0) {
+    let hr = hhmmz[0..2]
+        .parse()
+        .map_err(|e| anyhow!("could not parse hours in {hhmmz}: {e}"))?;
+    let min = hhmmz[2..4]
+        .parse()
+        .map_err(|e| anyhow!("could not parse minutes in {hhmmz}: {e}"))?;
+    let n = Utc::now();
+    // did we just cross midnight?
+    let n = if hr == 23 && n.hour() == 0 {
+        n - Duration::days(1)
+    } else {
+        n
+    };
+    if let Single(t) = Utc.with_ymd_and_hms(n.year(), n.month(), n.day(), hr, min, 0) {
         Ok(t)
     } else {
         bail!("Could not convert time")
@@ -87,11 +96,10 @@ fn parse_spot_split(line: &str) -> Option<SpotInfo> {
     })
 }
 
-pub async fn read_rbn(db_lock: Arc<RwLock<spot_db::SpotDB>>, cfg: config::RBNConfig) -> Result<()> {
-    // let mut rbn = RealTelnet::connect(cfg.host, cfg.port)?;
-    let mut rbn = MockTelnet::from_bytes(TEST_DATA.as_bytes());
+pub async fn read_rbn(shared_db: SharedDB, cfg: config::RBNConfig) -> Result<()> {
+    let mut rbn = RealTelnet::connect(&cfg.host, cfg.port)?;
+    //let mut rbn = MockTelnet::from_bytes(TEST_DATA.as_bytes());
 
-    // send callsign
     rbn.send_callsign(&cfg.callsign)?;
 
     let mut line = String::new();
@@ -102,16 +110,13 @@ pub async fn read_rbn(db_lock: Arc<RwLock<spot_db::SpotDB>>, cfg: config::RBNCon
             Ok(0) => bail!("EOF"), // EOF
             Ok(_) => {
                 if let Some(s) = parse_spot_split(line.as_str()) {
-                    let n = Utc::now();
-                    if let Ok(ts) = parse_hhmmz_to_utc(&s.utc_time, n.year(), n.month(), n.day()) {
-                        if let Ok(mut db) = db_lock.write() {
-                            db.add_spot(
-                                &s.spotter, &s.spotted, s.freq_khz, &s.mode, s.snr_db, s.wpm,
-                                &s.msg, ts,
-                            );
-                        } else {
-                            bail!("lock error")
-                        }
+                    if let Ok(ts) = parse_hhmmz_to_utc(&s.utc_time) {
+                        let mut db = shared_db.write();
+                        db.add_spot(
+                            &s.spotter, &s.spotted, s.freq_khz, &s.mode, s.snr_db, s.wpm, &s.msg,
+                            ts,
+                        );
+                        println!("added spot {line}");
                     }
                 } else {
                     eprintln!("could not parse line: {line}");
