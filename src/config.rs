@@ -5,6 +5,7 @@ use std::{fs, path::Path};
 pub struct Config {
     pub rbn: RBNConfig,
     pub db: DBConfig,
+    pub region_file: String,
 }
 
 #[derive(Debug, Deserialize)]

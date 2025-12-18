@@ -8,7 +8,7 @@ use std::time::Duration;
 pub type SharedDB = shared::Shared<SpotDB>;
 
 #[derive(Debug, PartialEq)]
-struct Spot {
+pub struct Spot {
     spotter: String, // e.g. "G4IRN"
     spotted: String, // spotted callsign
     freq_khz: f64,   // frequency in kHz (or MHz – whatever the cluster reports)
@@ -19,10 +19,10 @@ struct Spot {
     timestamp: DateTime<Utc>,
 }
 
-struct Region {
-    name: String,
-    spots: Vec<Arc<Spot>>,
-    prefixes: Vec<String>,
+pub struct Region {
+    pub name: String,
+    pub spots: Vec<Arc<Spot>>,
+    pub prefixes: Vec<String>,
 }
 
 impl Region {

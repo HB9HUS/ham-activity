@@ -8,6 +8,7 @@ use tokio::spawn;
 mod config;
 mod line_source;
 mod rbn_reader;
+mod region_loader;
 mod rest_api;
 mod shared;
 mod spot_db;
@@ -34,6 +35,13 @@ async fn periodic_cleaner(shared_db: spot_db::SharedDB, db_cfg: config::DBConfig
         db.cleanup_old_spots(max_spot_age);
     }
 }
+fn load_regions(shared_db: spot_db::SharedDB, regions: Vec<region_loader::Dxcc>) {
+    let mut db = shared_db.write();
+    for region in &regions {
+        let prefixes = region.prefix.split(",").map(|s| s.to_string()).collect();
+        db.add_region(region.name.to_string(), prefixes);
+    }
+}
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -48,12 +56,14 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     };
     println!("{:#?}", cfg);
 
-    let db = shared::Shared::new(spot_db::SpotDB::new());
-    spawn(rest_api::serve(db.clone()));
-    spawn(periodic_cleaner(db.clone(), cfg.db));
-    rbn_reader::read_rbn(db.clone(), cfg.rbn).await?;
+    let shared_db = shared::Shared::new(spot_db::SpotDB::new());
+    let regions = region_loader::load(cfg.region_file)?;
 
-    let d = db.read();
-    println!("spots: {}", d.spots_in_db());
+    load_regions(shared_db.clone(), regions);
+
+    spawn(rest_api::serve(shared_db.clone()));
+    spawn(periodic_cleaner(shared_db.clone(), cfg.db));
+    rbn_reader::read_rbn(shared_db.clone(), cfg.rbn).await?;
+
     Ok(())
 }

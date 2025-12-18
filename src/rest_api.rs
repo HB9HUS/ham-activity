@@ -1,4 +1,5 @@
 use warp;
+use warp::http::StatusCode;
 use warp::Filter;
 
 use crate::spot_db::SharedDB;
@@ -21,15 +22,23 @@ async fn get_db_stats(shared_db: SharedDB) -> Result<impl warp::Reply, warp::Rej
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Region {
     pub name: String,
+    pub num_spots: usize,
 }
 
 async fn get_region(
     name: String,
-    _shared_db: SharedDB,
+    shared_db: SharedDB,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    // For simplicity, let's say we are returning a static post
-    let region = Region { name };
-    Ok(warp::reply::json(&region))
+    let db = shared_db.read();
+    if let Some(r) = db.get_region(&name) {
+        let region = Region {
+            name,
+            num_spots: r.spots.len(),
+        };
+        Ok(warp::reply::json(&region))
+    } else {
+        Err(warp::reject::not_found())
+    }
 }
 
 fn get_region_route(

@@ -12,3 +12,5 @@ rbn:
 db:
   cleanup_period_secs: 900
   max_spot_age_secs: 1800
+
+region_file: "./data/dxcc.json"
