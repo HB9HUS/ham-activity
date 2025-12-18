@@ -64,6 +64,16 @@ fn load_regions(shared_db: spot_db::SharedDB, regions: Vec<region_loader::Dxcc>)
                 None => db.add_region(cq_name, prefixes.clone()),
             }
         }
+        for continent in region.continent.clone() {
+            match db.get_region(&continent) {
+                Some(r) => {
+                    let mut new_prefixes = prefixes.clone();
+                    new_prefixes.append(&mut r.prefixes.clone());
+                    db.add_region(continent, new_prefixes);
+                }
+                None => db.add_region(continent, prefixes.clone()),
+            }
+        }
     }
 }
 

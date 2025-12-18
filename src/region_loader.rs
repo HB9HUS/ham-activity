@@ -10,7 +10,7 @@ struct DxccRoot {
 #[derive(Debug, Deserialize)]
 pub struct Dxcc {
     /// Example: ["NA"]
-    continent: Vec<String>,
+    pub continent: Vec<String>,
 
     /// ISO‑3166‑1 alpha‑2 country code (e.g. "CA")
     #[serde(rename = "countryCode")]
