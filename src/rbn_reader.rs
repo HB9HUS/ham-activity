@@ -1,9 +1,10 @@
 use crate::config;
-use crate::line_source::{MockTelnet, RealTelnet, TEST_DATA};
+use crate::line_source::{LineSource, MockTelnet, RealTelnet};
 use crate::spot_db::SharedDB;
 use anyhow::{anyhow, bail, Result};
 use chrono::LocalResult::Single;
 use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
+use std::fs;
 use std::io::BufRead;
 
 struct SpotInfo {
@@ -97,8 +98,18 @@ fn parse_spot_split(line: &str) -> Option<SpotInfo> {
 }
 
 pub async fn read_rbn(shared_db: SharedDB, cfg: config::RBNConfig) -> Result<()> {
-    let mut rbn = RealTelnet::connect(&cfg.host, cfg.port)?;
-    //let mut rbn = MockTelnet::from_bytes(TEST_DATA.as_bytes());
+    let mut rbn: Box<dyn LineSource> = if cfg.enable_test {
+        let path = cfg.rbn_data_file;
+        let rbn_data = fs::read_to_string(&path)
+            .map_err(|e| anyhow!("could not read rbn_capture file {path}: {e}"))?;
+        Box::new(MockTelnet::from_bytes_with_delay(
+            rbn_data.as_bytes(),
+            std::time::Duration::from_millis(500),
+        ))
+    } else {
+        let rt = RealTelnet::connect(&cfg.host, cfg.port)?;
+        Box::new(rt)
+    };
 
     rbn.send_callsign(&cfg.callsign)?;
 

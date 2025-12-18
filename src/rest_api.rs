@@ -23,7 +23,10 @@ pub struct Region {
     pub name: String,
 }
 
-async fn get_region(name: String, db: SharedDB) -> Result<impl warp::Reply, warp::Rejection> {
+async fn get_region(
+    name: String,
+    _shared_db: SharedDB,
+) -> Result<impl warp::Reply, warp::Rejection> {
     // For simplicity, let's say we are returning a static post
     let region = Region { name };
     Ok(warp::reply::json(&region))

@@ -3,6 +3,11 @@ rbn:
   callsign: "HB9HUS" # callsign used for login
   host: "telnet.reversebeacon.net"
   port: 7000
+  # for testing purposes you can use data from a file
+  # use ./scripts/rbn_capture.sh to get the data
+  enable_test: true
+  rbn_data_file: "./rbn_capture.log"
+
 # config for in memory database
 db:
   cleanup_period_secs: 900

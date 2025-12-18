@@ -1,6 +1,7 @@
 use std::io::{self, BufRead, Write};
 use std::io::{BufReader, Cursor};
 use std::net::TcpStream;
+use std::thread;
 use std::time::Duration;
 
 /// Anything that can give us lines of text, and that we can also write to
@@ -12,6 +13,7 @@ pub trait LineSource: Write + BufRead {
         buf.clear();
         self.read_line(buf)
     }
+    fn send_callsign(&mut self, callsign: &str) -> io::Result<()>;
 }
 
 /// Wrapper that owns the underlying `TcpStream` and a `BufReader`.
@@ -27,13 +29,6 @@ impl RealTelnet {
         stream.set_read_timeout(Some(Duration::from_secs(5)))?;
         let reader = io::BufReader::new(stream.try_clone()?);
         Ok(Self { stream, reader })
-    }
-
-    /// Send the initial callsign (or any other command) to the server.
-    pub fn send_callsign(&mut self, callsign: &str) -> io::Result<()> {
-        let cs = format!("{}\r\n", callsign);
-        self.stream.write_all(cs.as_bytes())?;
-        self.stream.flush()
     }
 }
 
@@ -58,7 +53,13 @@ impl io::Read for RealTelnet {
         self.reader.read(buf)
     }
 }
-impl LineSource for RealTelnet {}
+impl LineSource for RealTelnet {
+    fn send_callsign(&mut self, callsign: &str) -> io::Result<()> {
+        let cs = format!("{}\r\n", callsign);
+        self.stream.write_all(cs.as_bytes())?;
+        self.stream.flush()
+    }
+}
 
 /// `MockTelnet` pretends to be a Telnet connection but simply reads from an
 /// in‑memory buffer. The buffer can contain any number of lines you want to
@@ -68,6 +69,7 @@ pub struct MockTelnet {
     writer: Cursor<Vec<u8>>,
     /// The reader part – a `BufReader` over the same underlying cursor.
     reader: BufReader<Cursor<Vec<u8>>>,
+    delay_per_read: Duration,
 }
 
 impl MockTelnet {
@@ -77,18 +79,28 @@ impl MockTelnet {
         // Clone the data for the reader side.
         let reader_cursor = Cursor::new(data.to_vec());
         let reader = BufReader::new(reader_cursor);
-        Self { writer, reader }
+        Self {
+            writer,
+            reader,
+            delay_per_read: Duration::ZERO,
+        }
     }
-
-    /// Helper that mimics the “send callsign” step – it just discards the data.
-    pub fn send_callsign(&mut self, _callsign: &str) -> io::Result<()> {
-        // In a mock we don’t need to do anything; the test data is already
-        // present in the read buffer.
-        Ok(())
+    /// Build a mock from a static string (or any `&[u8]` you like).
+    /// adds the specified delay to each read to simulate the speed
+    /// data is generated
+    pub fn from_bytes_with_delay(data: &[u8], delay_per_read: Duration) -> Self {
+        let writer = Cursor::new(Vec::new());
+        // Clone the data for the reader side.
+        let reader_cursor = Cursor::new(data.to_vec());
+        let reader = BufReader::new(reader_cursor);
+        Self {
+            writer,
+            reader,
+            delay_per_read,
+        }
     }
 }
 
-/* Trait impls ----------------------------------------------------------- */
 impl Write for MockTelnet {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         // Append to the internal buffer – useful if you want to verify what the
@@ -102,6 +114,10 @@ impl Write for MockTelnet {
 }
 impl BufRead for MockTelnet {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
+        if self.delay_per_read != Duration::ZERO {
+            let delay = self.delay_per_read;
+            thread::sleep(delay);
+        }
         self.reader.fill_buf()
     }
     fn consume(&mut self, amt: usize) {
@@ -113,41 +129,8 @@ impl io::Read for MockTelnet {
         self.reader.read(buf)
     }
 }
-impl LineSource for MockTelnet {}
-
-pub const TEST_DATA: &str = "\
-Please enter your call: HB9HUS
-Hello, HB9HUS! Connected.
-Local users: 208
-Spot rate: 4/s (14,172/h)
-HB9HUS de RELAY 15-Dec-2025 14:48Z >
-
-DX de OK1FCJ-#:   7004.0  SP/DH2UAI      CW    20 dB  16 WPM  CQ      1448Z
-DX de NU4F-#:    28205.0  N9LXP/B        CW     5 dB  15 WPM  BEACON  1448Z
-DX de DF2CK-#:    1854.0  OK0EV          CW     3 dB  16 WPM  BEACON  1448Z
-DX de DF2CK-#:   28254.6  K4JEE/B        CW     4 dB  15 WPM  BEACON  1448Z
-DX de DF2CK-#:    7037.6  IZ3DVW/B       CW     5 dB  16 WPM  BEACON  1448Z
-DX de DF2CK-#:   14055.0  DL0IN          CW    14 dB  10 WPM  CQ      1448Z
-DX de DF2CK-#:    3600.0  OK0EN          CW    10 dB  10 WPM  BEACON  1448Z
-DX de MM0GPZ-#:  18097.8  IK6BAK/B       CW     5 dB  12 WPM  BEACON  1448Z
-DX de MM0GPZ-#:  14055.0  DL0IN          CW    35 dB  10 WPM  CQ      1448Z
-DX de SQ5J-#:     7004.1  SP/DH2UAI      CW     6 dB  16 WPM  CQ      1448Z
-DX de K5TR-#:    28234.4  WS2K/B         CW    28 dB  17 WPM  BEACON  1448Z
-DX de K5TR-#:    28221.8  W1DLO/B        CW     6 dB  18 WPM  BEACON  1448Z
-DX de NU4F-2-#:  28205.0  N9LXP/B        CW    12 dB  15 WPM  BEACON  1448Z
-DX de W6YX-#:     7002.5  JA1GZV         CW     9 dB  21 WPM  CQ      1448Z
-DX de SM7IUN-#:   7004.0  SP/DH2UAI      CW    20 dB  16 WPM  CQ      1448Z
-DX de WZ7I-#:    28269.9  IZ8FFZ/B       CW    16 dB  15 WPM  BEACON  1448Z
-DX de DK0TE-#:    7004.0  SP/DH2UAI      CW    21 dB  16 WPM  CQ      1448Z
-DX de DR4W-#:     7004.0  SP/DH2UAI      CW    13 dB  16 WPM  CQ      1448Z
-DX de K3LR-#:    28024.0  EA6ACA         CW    59 dB  17 WPM  CQ      1448Z
-DX de K1RA-#:    28024.0  EA6ACA         CW    12 dB  16 WPM  CQ      1448Z
-DX de S54L-#:     7004.0  SP/DH2UAI      CW    16 dB  16 WPM  CQ      1448Z
-DX de W3OA-#:    21024.0  F/DK9HE        CW     9 dB  24 WPM  CQ      1448Z
-DX de UA4M-#:    18077.8  DL1CW          CW     6 dB  29 WPM  CQ      1448Z
-DX de UA4M-#:     3527.4  YO4AR          CW    21 dB  27 WPM  CQ      1448Z
-DX de UA4M-#:     3530.9  YO4CAH         CW    12 dB  27 WPM  CQ      1448Z
-DX de UA4M-#:     3529.9  YO4BEX         CW    13 dB  30 WPM  CQ      1448Z
-DX de UA4M-#:     3522.5  YO4CAI         CW    10 dB  24 WPM  CQ      1448Z
-DX de OK1HRA-#:   7004.0  SP/DH2UAI      CW    18 dB  16 WPM  CQ      1448Z
-";
+impl LineSource for MockTelnet {
+    fn send_callsign(&mut self, _callsign: &str) -> io::Result<()> {
+        Ok(())
+    }
+}

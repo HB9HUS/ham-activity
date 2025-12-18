@@ -12,6 +12,10 @@ pub struct RBNConfig {
     pub callsign: String,
     pub host: String,
     pub port: u16,
+    #[serde(default)]
+    pub enable_test: bool,
+    #[serde(default)]
+    pub rbn_data_file: String,
 }
 
 #[derive(Debug, Deserialize)]
