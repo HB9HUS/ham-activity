@@ -1,127 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>CQ‑14 Region Overview</title>
-<style>
-  body {font-family:Arial,sans-serif;margin:0;padding:1rem;background:#f5f5f5;color:#333;}
-  h1{margin-top:0;font-size:1.8rem;color:#0066cc;}
-  .section{background:#fff;border-radius:6px;padding:1rem;margin-bottom:1rem;
-           box-shadow:0 2px 4px rgba(0,0,0,.1);}
-  .section h2{margin-top:0;font-size:1.4rem;border-bottom:1px solid #e0e0e0;padding-bottom:.3rem;}
-  .list{display:flex;flex-wrap:wrap;gap:.4rem;margin:0;padding:0;list-style:none;}
-  .list li{background:#e8f4ff;border-radius:4px;padding:.3rem .6rem;font-size:.9rem;}
-  table{width:100%;border-collapse:collapse;margin-top:.5rem;}
-  th,td{border:1px solid #ddd;padding:.5rem;vertical-align:top;text-align:left;}
-  th{background:#f0f8ff;}
-  .loading{font-style:italic;color:#777;}
-  .error{color:#c00;font-weight:bold;}
-  /* make the activity matrix a bit tighter */
-  .matrix th, .matrix td{padding:.4rem;}
-</style>
+  <meta charset="UTF-8">
+  <title>Region Overview</title>
+
+  <link rel="stylesheet" href="/ui/vendor/bootstrap.min.css">
+
+  <link rel="stylesheet" href="/ui/style.css">
 </head>
-<body>
+<body class="bg-light">
 
-<h1>Region Overview</h1>
+<div class="container py-4">
+  <h1 class="mb-4 text-primary">Region Overview</h1>
 
-<div id="content"><p class="loading">Loading data…</p></div>
+  <div id="content"><p class="loading">Loading data…</p></div>
+</div>
 
-<script>
-function getQueryParam(name) {
-  const params = new URLSearchParams(window.location.search);
-  return params.get(name);
-}
+<script src="/ui/vendor/jquery.min.js"></script>
 
-(async () => {
-  const container = document.getElementById('content');
+<script src="/ui/vendor/bootstrap.bundle.min.js"></script>
 
-  try {
-    const regionFromUrl = getQueryParam('region');          // e.g. "CQ_15"
-    const region = regionFromUrl ? regionFromUrl : 'CQ_14'; // fallback to original
-
-    const apiUrl = `http://localhost:8000/region/${encodeURIComponent(region)}`;
-    const resp = await fetch(apiUrl);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-
-    const makeList = arr => {
-      const ul = document.createElement('ul');
-      ul.className = 'list';
-      (arr||[]).forEach(it=>{const li=document.createElement('li');li.textContent=it;ul.appendChild(li);});
-      return ul;
-    };
-
-    /* ---------- Region name ---------- */
-    const nameSec = document.createElement('div');
-    nameSec.className='section';
-    nameSec.innerHTML='<h2>Region</h2><p>'+ (data.name||'‑') +'</p>';
-    container.appendChild(nameSec);
-
-    /* ---------- Spotters ---------- */
-    const spotSec = document.createElement('div');
-    spotSec.className='section';
-    spotSec.innerHTML='<h2>Spotters</h2>'+
-      '<p>Total spotters: '+ (data.spotters?.length||0) +'</p>';
-    spotSec.appendChild(makeList(data.spotters));
-    container.appendChild(spotSec);
-
-    /* ---------- Number of spots ---------- */
-    const numSec = document.createElement('div');
-    numSec.className='section';
-    numSec.innerHTML='<h2>Number of Spotter Spots</h2>'+
-      '<p>'+(data.num_spotter_spots??'‑')+'</p>';
-    container.appendChild(numSec);
-
-    /* ---------- Band activities matrix ---------- */
-    const bandSec = document.createElement('div');
-    bandSec.className='section';
-    bandSec.innerHTML='<h2>Band Activities</h2>';
-
-    const bands = data.band_activities || [];
-
-    // Build header row (band names)
-    const table = document.createElement('table');
-    table.className='matrix';
-    const thead = document.createElement('thead');
-    const headTr = document.createElement('tr');
-    const emptyTh = document.createElement('th');
-    emptyTh.textContent = '';            // top‑left corner empty
-    headTr.appendChild(emptyTh);
-    bands.forEach(b=>{ const th=document.createElement('th'); th.textContent=b.band; headTr.appendChild(th); });
-    thead.appendChild(headTr);
-    table.appendChild(thead);
-
-    // Helper to add a row for a given minute bucket
-    const addRow = (label, getter) => {
-      const tr = document.createElement('tr');
-      const th = document.createElement('th');
-      th.textContent = label;
-      tr.appendChild(th);
-      bands.forEach(b=>{ const td=document.createElement('td');
-        const arr = getter(b);
-        // td.appendChild(makeList(arr));
-        td.appendChild(makeList([arr.length]));
-        tr.appendChild(td);
-      });
-      table.appendChild(tr);
-    };
-
-    addRow('1 min', b=>b.active_1min);
-    addRow('5 min', b=>b.active_5min);
-    addRow('15 min',b=>b.active_15min);
-
-    bandSec.appendChild(table);
-    container.appendChild(bandSec);
-
-    // remove loading notice
-    const loading = document.querySelector('.loading');
-    if (loading) loading.remove();
-
-  } catch (e) {
-    container.innerHTML = `<p class="error">Failed to load data: ${e.message}</p>`;
-  }
-})();
-</script>
-
+<script src="/ui/app.js"></script>
 </body>
 </html>

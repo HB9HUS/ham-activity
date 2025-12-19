@@ -1,0 +1,16 @@
+.pill-list {
+  display: flex;
+  flex-wrap: wrap;          /* allow multiple rows */
+  gap: 0.4rem;              /* spacing between pills */
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pill-list li {
+  background: #e8f4ff;      /* same colour as before */
+  border-radius: 4px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.9rem;
+  white-space: nowrap;      /* keep each callsign on one line */
+}
