@@ -189,10 +189,12 @@ fn get_db_stats_route(
 pub fn routes(
     db: SharedDB,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    let fs = warp::path("ui").and(warp::fs::dir("./static/ui/"));
     get_region_route(db.clone())
         .or(get_db_stats_route(db.clone()))
         .or(get_regions_route(db.clone()))
         .or(get_frequency_route(db.clone()))
+        .or(fs)
 }
 
 fn with_db(
