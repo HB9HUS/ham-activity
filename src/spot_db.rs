@@ -1,6 +1,7 @@
 use crate::shared;
 use chrono::{DateTime, Utc};
 use core::ops::Sub;
+use log::error;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -105,6 +106,12 @@ impl SpotDB {
         self.regions
             .iter_mut()
             .for_each(|(_, r)| r.remove_spots(&expired));
+        // sanity check
+        expired.iter().for_each(|e| {
+            if Arc::strong_count(e) > 1 {
+                error!("Bug in cleanup somewhere! Arc::strong_count > 1 after delete!")
+            }
+        })
     }
 
     pub fn spots_in_db(&self) -> usize {

@@ -26,7 +26,7 @@ impl RealTelnet {
     pub fn connect(host: &str, port: u16) -> io::Result<Self> {
         let addr = (host, port);
         let stream = TcpStream::connect(addr)?;
-        stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
         let reader = io::BufReader::new(stream.try_clone()?);
         Ok(Self { stream, reader })
     }

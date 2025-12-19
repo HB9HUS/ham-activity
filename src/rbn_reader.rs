@@ -7,6 +7,7 @@ use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
 use log::{error, info, trace};
 use std::fs;
 use std::io::BufRead;
+use std::io::ErrorKind;
 
 struct SpotInfo {
     spotter: String,
@@ -78,6 +79,10 @@ fn parse_spot_split(line: &str) -> Result<SpotInfo> {
     let wpm: u32 = get_part(None)?.parse()?;
     get_part(Some("WPM"))?;
     let msg = get_part(None)?.to_string();
+    if msg == "NCDXF" {
+        // B probably means beacon?
+        let _ = get_part(Some("B"));
+    }
     let hhmmz = get_part(None)?.to_string();
     let utc_time = parse_hhmmz_to_utc(&hhmmz)?;
 
@@ -133,7 +138,16 @@ async fn connect_read(shared_db: SharedDB, cfg: &config::RBNConfig) -> Result<()
                     }
                 }
             }
-            Err(e) => bail!("read error: {e}"),
+            Err(e) => {
+                match e.kind() {
+                    ErrorKind::WouldBlock | ErrorKind::TimedOut => {
+                        // normal timeout, no data yet
+                        // just continue the read loop
+                        continue;
+                    }
+                    _ => bail!("read error: {e}"),
+                }
+            }
         }
     }
 }
