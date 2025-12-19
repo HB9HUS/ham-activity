@@ -1,5 +1,6 @@
 use crate::bands::HF_BANDS;
 use chrono::{DateTime, Utc};
+use log::{debug, info};
 use std::collections::HashMap;
 use std::time::Duration;
 use warp;
@@ -18,7 +19,7 @@ pub struct DBStats {
 }
 
 async fn get_db_stats(shared_db: SharedDB) -> Result<impl warp::Reply, warp::Rejection> {
-    println!("handling stats request");
+    debug!("--> get_db_stats");
     let db = shared_db.read();
     const FORMAT: &str = "%Y-%m-%d %H:%M:%S";
     let start_time = format!("{}", db.init_timestamp.format(FORMAT));
@@ -39,7 +40,7 @@ async fn get_frequency(
     freq_hz: u64,
     shared_db: SharedDB,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    println!("handling frequency request");
+    debug!("--> get_frequency");
     let db = shared_db.read();
     let freq_khz = (freq_hz as f64) / 1000.0;
     let callsigns = db.get_frequency_users(freq_khz);
@@ -79,7 +80,7 @@ async fn get_region(
     name: String,
     shared_db: SharedDB,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    println!("handling region request");
+    debug!("--> get_db_region");
     let db = shared_db.read();
     if let Some(r) = db.get_region(&name) {
         let (band_activities, spotters) = get_band_activities(r);
@@ -96,6 +97,7 @@ async fn get_region(
 }
 
 fn get_band_activities(region: &spot_db::Region) -> (Vec<BandActivity>, Vec<String>) {
+    debug!("--> get_band_activity");
     let mut band_activity = HashMap::new();
     let mut spotters = Vec::new();
     for band in HF_BANDS {
@@ -201,6 +203,6 @@ fn with_db(
 
 pub async fn serve(db: SharedDB) {
     let routes = routes(db);
-    println!("Server started at http://localhost:8000");
+    info!("Server started at http://localhost:8000");
     warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
 }

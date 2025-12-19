@@ -4,6 +4,7 @@ use crate::spot_db::SharedDB;
 use anyhow::{anyhow, bail, Result};
 use chrono::LocalResult::Single;
 use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
+use log::{info, trace};
 use std::fs;
 use std::io::BufRead;
 
@@ -42,50 +43,53 @@ pub fn parse_hhmmz_to_utc(hhmmz: &str) -> Result<DateTime<Utc>> {
     }
 }
 
-fn parse_spot_split(line: &str) -> Option<SpotInfo> {
+fn parse_spot_split(line: &str) -> Result<SpotInfo> {
     // 1️⃣ Split the line into the “words” we care about.
     //    The iterator yields:
     //    ["DX","de","G4IRN-#:","3531.9","DL2AWA","CW","14","dB","23","WPM","CQ","2034Z"]
     let mut parts = line.split_ascii_whitespace();
 
-    if parts.next()? != "DX" {
-        return None;
-    }
-    if parts.next()? != "de" {
-        return None;
-    }
+    let mut get_part = |want| {
+        let p = parts
+            .next()
+            .ok_or(anyhow! {"expected part, found nothing"})?;
+        return match want {
+            Some(wp) if p == wp => Ok(p),
+            None => Ok(p),
+            Some(wp) => bail!("expected {wp} found {p}"),
+        };
+    };
 
-    let raw_origin = parts.next()?; // e.g. "G4IRN-#:"
+    get_part(Some("DX"))?;
+    get_part(Some("de"))?;
+
+    let raw_origin = get_part(None)?; // e.g. "G4IRN-#:"
     let spotter = raw_origin
         .trim_end_matches("-#:") // remove the suffix
         .trim_end_matches('-') // just in case the colon is missing
         .to_string();
 
-    let freq_khz: f64 = parts.next()?.parse().ok()?;
+    let freq_khz: f64 = get_part(None)?.parse()?;
 
-    let spotted = parts.next()?.to_string();
+    let spotted = get_part(None)?.to_string();
 
-    let mode = parts.next()?.to_string();
+    let mode = get_part(None)?.to_string();
 
-    let snr_db: i32 = parts.next()?.parse().ok()?;
-    // skip the “dB” token
-    if parts.next()? != "dB" {
-        return None;
-    }
+    let snr_db: i32 = get_part(None)?.parse()?;
 
-    let wpm: u32 = parts.next()?.parse().ok()?;
+    get_part(Some("dB"))?;
+
+    let wpm: u32 = get_part(None)?.parse()?;
     // skip the “WPM” token
-    if parts.next()? != "WPM" {
-        return None;
-    }
+    get_part(Some("WPM"))?;
 
-    let msg = parts.next()?.to_string();
+    let msg = get_part(None)?.to_string();
 
-    let utc_time = parts.next()?.to_string();
+    let utc_time = get_part(None)?.to_string();
 
     // Anything left is ignored
 
-    Some(SpotInfo {
+    Ok(SpotInfo {
         spotter,
         freq_khz,
         spotted,
@@ -113,23 +117,29 @@ pub async fn read_rbn(shared_db: SharedDB, cfg: config::RBNConfig) -> Result<()>
 
     rbn.send_callsign(&cfg.callsign)?;
 
-    let mut line = String::new();
+    let mut line_buf = String::new();
     loop {
-        line.clear();
+        line_buf.clear();
         // read_until stops at '\n'; Telnet lines end with "\r\n"
-        match rbn.read_line(&mut line) {
+        match rbn.read_line(&mut line_buf) {
             Ok(0) => bail!("EOF"), // EOF
             Ok(_) => {
-                if let Some(s) = parse_spot_split(line.as_str()) {
-                    if let Ok(ts) = parse_hhmmz_to_utc(&s.utc_time) {
-                        let mut db = shared_db.write();
-                        db.add_spot(
-                            &s.spotter, &s.spotted, s.freq_khz, &s.mode, s.snr_db, s.wpm, &s.msg,
-                            ts,
-                        );
+                let line = line_buf.trim();
+                match parse_spot_split(line) {
+                    Ok(s) => {
+                        if let Ok(ts) = parse_hhmmz_to_utc(&s.utc_time) {
+                            trace!("parsed: {line}");
+                            let mut db = shared_db.write();
+                            db.add_spot(
+                                &s.spotter, &s.spotted, s.freq_khz, &s.mode, s.snr_db, s.wpm,
+                                &s.msg, ts,
+                            );
+                        }
                     }
-                } else {
-                    eprintln!("could not parse line: {line}");
+                    Err(e) => {
+                        let line = line_buf.trim();
+                        info!("could not parse line: {line}, {e}");
+                    }
                 }
             }
             Err(e) => {

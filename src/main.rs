@@ -1,4 +1,6 @@
+use anyhow::Result;
 use clap::Parser;
+use log::{debug, error, info};
 use std::path::PathBuf;
 use std::process;
 use std::thread;
@@ -20,11 +22,12 @@ mod spot_db;
     version,
     about = "Filters and geneates stats from RBN"
 )]
-
 struct Cli {
     /// Path to config file
     #[arg(short = 'c', long = "config", default_value = "config.yaml")]
     config: PathBuf,
+    #[arg(short = 't', long = "test", default_value = "false")]
+    test: bool,
 }
 
 async fn periodic_cleaner(shared_db: spot_db::SharedDB, db_cfg: config::DBConfig) {
@@ -32,9 +35,10 @@ async fn periodic_cleaner(shared_db: spot_db::SharedDB, db_cfg: config::DBConfig
     let max_spot_age = Duration::from_secs(db_cfg.max_spot_age_secs);
     loop {
         thread::sleep(cleanup_period);
-        println!("running periodic cleaner");
+        info!("running periodic cleaner");
         let mut db = shared_db.write();
         db.cleanup_old_spots(max_spot_age);
+        info!("finished periodic cleaner");
     }
 }
 fn load_regions(shared_db: spot_db::SharedDB, regions: Vec<region_loader::Dxcc>) {
@@ -81,14 +85,18 @@ fn load_regions(shared_db: spot_db::SharedDB, regions: Vec<region_loader::Dxcc>)
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cli = Cli::parse();
 
-    let cfg = match config::load_config(cli.config) {
+    let mut cfg = match config::load_config(&cli.config) {
         Ok(cfg) => cfg,
         Err(e) => {
-            eprintln!("could not load config: {}", e);
+            error!("could not load config: {}", e);
             process::exit(1)
         }
     };
-    println!("{:#?}", cfg);
+    if cli.test {
+        cfg.rbn.enable_test = true;
+    }
+    env_logger::init();
+    debug!("{:#?}", cfg);
 
     let shared_db = shared::Shared::new(spot_db::SpotDB::new());
     let regions = region_loader::load(cfg.region_file)?;

@@ -17,4 +17,6 @@ ureq = "3"
 anyhow = "1"
 rstest = "0.26"
 warp = { version = "0.4", features = ["server"] }
+log = { version = "0.4", features = ["std"] }
+env_logger = "0.11.8"
 
