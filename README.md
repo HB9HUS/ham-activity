@@ -9,6 +9,9 @@ Currently the following endpoints are implemented:
 * /regions: lists all known regions
 * /frequency/FREQ-HZ: finds callsigns at that frequency (in Hz). Uses +/- 200Hz
 
+## Logging
+You can set log level by setting the environement variable RUST\_LOG
+
 ## Regions
 The file containing region to prefix mapping (./data/dxcc.json) is created from
 this repository: https://github.com/k0swe/dxcc-json

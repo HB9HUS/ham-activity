@@ -4,7 +4,7 @@ use crate::spot_db::SharedDB;
 use anyhow::{anyhow, bail, Result};
 use chrono::LocalResult::Single;
 use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
-use log::{info, trace};
+use log::{error, info, trace};
 use std::fs;
 use std::io::BufRead;
 
@@ -16,7 +16,7 @@ struct SpotInfo {
     snr_db: i32,
     wpm: u32,
     msg: String,
-    utc_time: String,
+    utc_time: DateTime<chrono::Utc>,
 }
 
 pub fn parse_hhmmz_to_utc(hhmmz: &str) -> Result<DateTime<Utc>> {
@@ -49,6 +49,7 @@ fn parse_spot_split(line: &str) -> Result<SpotInfo> {
     //    ["DX","de","G4IRN-#:","3531.9","DL2AWA","CW","14","dB","23","WPM","CQ","2034Z"]
     let mut parts = line.split_ascii_whitespace();
 
+    // gets next part, checks if matches Some("want") if not None
     let mut get_part = |want| {
         let p = parts
             .next()
@@ -70,22 +71,15 @@ fn parse_spot_split(line: &str) -> Result<SpotInfo> {
         .to_string();
 
     let freq_khz: f64 = get_part(None)?.parse()?;
-
     let spotted = get_part(None)?.to_string();
-
     let mode = get_part(None)?.to_string();
-
     let snr_db: i32 = get_part(None)?.parse()?;
-
     get_part(Some("dB"))?;
-
     let wpm: u32 = get_part(None)?.parse()?;
-    // skip the “WPM” token
     get_part(Some("WPM"))?;
-
     let msg = get_part(None)?.to_string();
-
-    let utc_time = get_part(None)?.to_string();
+    let hhmmz = get_part(None)?.to_string();
+    let utc_time = parse_hhmmz_to_utc(&hhmmz)?;
 
     // Anything left is ignored
 
@@ -101,9 +95,9 @@ fn parse_spot_split(line: &str) -> Result<SpotInfo> {
     })
 }
 
-pub async fn read_rbn(shared_db: SharedDB, cfg: config::RBNConfig) -> Result<()> {
+async fn connect_read(shared_db: SharedDB, cfg: &config::RBNConfig) -> Result<()> {
     let mut rbn: Box<dyn LineSource> = if cfg.enable_test {
-        let path = cfg.rbn_data_file;
+        let path = cfg.rbn_data_file.clone();
         let rbn_data = fs::read_to_string(&path)
             .map_err(|e| anyhow!("could not read rbn_capture file {path}: {e}"))?;
         Box::new(MockTelnet::from_bytes_with_delay(
@@ -127,24 +121,29 @@ pub async fn read_rbn(shared_db: SharedDB, cfg: config::RBNConfig) -> Result<()>
                 let line = line_buf.trim();
                 match parse_spot_split(line) {
                     Ok(s) => {
-                        if let Ok(ts) = parse_hhmmz_to_utc(&s.utc_time) {
-                            trace!("parsed: {line}");
-                            let mut db = shared_db.write();
-                            db.add_spot(
-                                &s.spotter, &s.spotted, s.freq_khz, &s.mode, s.snr_db, s.wpm,
-                                &s.msg, ts,
-                            );
-                        }
+                        trace!("parsed: {line}");
+                        let mut db = shared_db.write();
+                        db.add_spot(
+                            &s.spotter, &s.spotted, s.freq_khz, &s.mode, s.snr_db, s.wpm, &s.msg,
+                            s.utc_time,
+                        );
                     }
                     Err(e) => {
-                        let line = line_buf.trim();
                         info!("could not parse line: {line}, {e}");
                     }
                 }
             }
-            Err(e) => {
-                bail!("read error: {e}")
-            }
+            Err(e) => bail!("read error: {e}"),
+        }
+    }
+}
+
+pub async fn read_rbn(shared_db: SharedDB, cfg: config::RBNConfig) -> Result<()> {
+    loop {
+        match connect_read(shared_db.clone(), &cfg).await {
+            Ok(_) => error!("recieved Ok from connect read, should never happen!"),
+            Err(e) if format!("{e}") == "EOF" => info!("got EOF, reconnecting"),
+            Err(e) => info!("got {e}, reconnecting"),
         }
     }
 }
