@@ -18,9 +18,9 @@ mod spot_db;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "rbn-filter",
+    name = "ham-activity",
     version,
-    about = "Filters and geneates stats from RBN"
+    about = "Tool to fetch data from RBN and display in a simple UI and via Rest"
 )]
 struct Cli {
     /// Path to config file

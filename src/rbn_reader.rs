@@ -117,6 +117,7 @@ async fn connect_read(shared_db: SharedDB, cfg: &config::RBNConfig) -> Result<()
     rbn.send_callsign(&cfg.callsign)?;
 
     let mut line_buf = String::new();
+    let mut timeout_counter = 0;
     loop {
         line_buf.clear();
         // read_until stops at '\n'; Telnet lines end with "\r\n"
@@ -138,16 +139,16 @@ async fn connect_read(shared_db: SharedDB, cfg: &config::RBNConfig) -> Result<()
                     }
                 }
             }
-            Err(e) => {
-                match e.kind() {
-                    ErrorKind::WouldBlock | ErrorKind::TimedOut => {
-                        // normal timeout, no data yet
-                        // just continue the read loop
-                        continue;
+            Err(e) => match e.kind() {
+                ErrorKind::WouldBlock | ErrorKind::TimedOut => {
+                    if timeout_counter >= 10 {
+                        bail!("telnet connection exceeded max timeouts");
                     }
-                    _ => bail!("read error: {e}"),
+                    timeout_counter += 1;
+                    continue;
                 }
-            }
+                _ => bail!("read error: {e}"),
+            },
         }
     }
 }

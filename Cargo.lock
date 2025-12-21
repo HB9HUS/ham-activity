@@ -432,6 +432,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "ham-activity"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "dashmap",
+ "env_logger",
+ "http-body-util",
+ "log",
+ "once_cell",
+ "rstest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tokio",
+ "ureq",
+ "warp",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -822,27 +843,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a338cc41d27e6cc6dce6cefc13a0729dfbb81c262b1f519331575dd80ef3067f"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "rbn-filter"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "dashmap",
- "env_logger",
- "http-body-util",
- "log",
- "once_cell",
- "rstest",
- "serde",
- "serde_json",
- "serde_yaml",
- "tokio",
- "ureq",
- "warp",
 ]
 
 [[package]]
