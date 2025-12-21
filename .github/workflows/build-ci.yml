@@ -38,6 +38,10 @@ jobs:
         # If it returns 0 the workflow continues, otherwise it fails.
         run: ./scripts/grype_check.sh
 
+      - name: downcase IMAGE_NAME
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+
   # ---------------------------------------------------------------
   #  BUILD DOCKER IMAGE
   # ---------------------------------------------------------------
