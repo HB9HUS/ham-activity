@@ -5,6 +5,7 @@ and creates some activity stats for different regions.
 ## Installation
 
 ### docker
+pull the docker image. check here for latest version: https://hub.docker.com/r/hb9hus/ham-activity
 
 ### build from source
 You need a local rust environement.
