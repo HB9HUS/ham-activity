@@ -11,6 +11,7 @@ RUN cargo fetch
 
 # Now copy the actual source code.
 COPY src/ ./src/
+COPY static/ ./static/
 # Build a *release* binary (optimised, stripped).  If the project
 # produces a library instead of a binary, change `--bin <name>` to
 # `--lib` or the appropriate target.
@@ -27,6 +28,7 @@ RUN groupadd -r "${USER}" && useradd -r -g "${USER}" -u "${UID}" "${USER}"
 WORKDIR /app
 
 COPY --from=builder /app/target/release/ham-activity ./ham-activity
+COPY --from=builder /app/static ./static
 RUN chown ${USER}:${USER} ham-activity
 
 USER ${USER}:${USER}
