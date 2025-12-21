@@ -2,11 +2,13 @@ name: Build-CI
 
 on:
   push:
-    branches: [ main ]          # run on pushes to main
+    branches: [ main ]
+    tags:
+      - '*'
   pull_request:
-    branches: [ main ]          # also run on PRs targeting main
-  workflow_dispatch:           # allow manual runs
-
+    branches: [ main ]
+  workflow_dispatch:
+  
 env:
   # -----------------------------------------------------------------
   #  IMAGE SETTINGS – change these to match your project
@@ -17,7 +19,7 @@ env:
   # -----------------------------------------------------------------
   #  PUSH CONTROL – set to "true" to push, otherwise the job stops after build
   # -----------------------------------------------------------------
-  PUSH_IMAGE: ${{ (github.ref_type == 'tag' && (secrets.PUSH_DOCKER_IMAGE || 'true')) || 'false' }}
+  PUSH_IMAGE: ${{ github.ref_type == 'tag' && secrets.PUSH_DOCKER_IMAGE != '' }}
 
 jobs:
   # ---------------------------------------------------------------
