@@ -16,19 +16,20 @@ COPY src/ ./src/
 # `--lib` or the appropriate target.
 RUN cargo build --release
 
-FROM alpine:3.20 AS runtime
+FROM debian:bookworm-slim AS runtime
 
 # Create a non‑root user for the final container.
 ARG USER=appuser
 ARG UID=10001
-RUN addgroup -S "${USER}" && adduser -S -G "${USER}" -u "${UID}" "${USER}"
+RUN groupadd -r "${USER}" && useradd -r -g "${USER}" -u "${UID}" "${USER}"
 
 # Switch to that user.
-USER ${USER}:${USER}
 WORKDIR /app
 
 COPY --from=builder /app/target/release/ham-activity ./ham-activity
+RUN chown ${USER}:${USER} ham-activity
 
+USER ${USER}:${USER}
 EXPOSE 8080
 
 ENTRYPOINT ["/app/ham-activity"]
