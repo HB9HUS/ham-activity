@@ -70,29 +70,12 @@ function makeList(arr, urlBase = null) {
       <div class="card-body"><p class="card-text">${data.name || '‑'}</p></div>`;
     container.appendChild(nameCard);
 
-    /* ----- Spotters ----- */
-    const spotCard = document.createElement('div');
-    spotCard.className = 'card mb-3';
-    spotCard.innerHTML = `
-      <div class="card-header fw-bold">Spotters (${data.spotters?.length ?? 0})</div>
-      <div class="card-body"></div>`;
-    spotCard.querySelector('.card-body').appendChild(makeList(data.spotters, qrz_com_url), qrz_com_url);
-    container.appendChild(spotCard);
-
-    /* ----- Number of spots ----- */
-    const numCard = document.createElement('div');
-    numCard.className = 'card mb-3';
-    numCard.innerHTML = `
-      <div class="card-header fw-bold">Number of Spotter Spots</div>
-      <div class="card-body"><p class="card-text">${data.num_spotter_spots ?? '‑'}</p></div>`;
-    container.appendChild(numCard);
-
     /* ----- Band activities matrix (Bootstrap table) ----- */
     const bandCard = document.createElement('div');
     bandCard.className = 'card mb-3';
-    bandCard.innerHTML = '<div class="card-header fw-bold">Band Activities</div>';
+    bandCard.innerHTML = `<div class="card-header fw-bold">Band Activities - Total Spots: ${data.num_spotter_spots ?? '‑'}</div>`;
     const table = document.createElement('table');
-    table.className = 'table table-sm table-striped text-center align-middle';
+    table.className = 'table table-sm table-striped text-center align-middle matrix';
     const thead = document.createElement('thead');
     const headTr = document.createElement('tr');
 
@@ -134,6 +117,16 @@ function makeList(arr, urlBase = null) {
     table.appendChild(tbody);
     bandCard.appendChild(table);
     container.appendChild(bandCard);
+
+    /* ----- Spotters ----- */
+    const spotCard = document.createElement('div');
+    spotCard.className = 'card mb-3';
+    spotCard.innerHTML = `
+      <div class="card-header fw-bold">Spotters (${data.spotters?.length ?? 0})</div>
+      <div class="card-body"></div>`;
+    spotCard.querySelector('.card-body').appendChild(makeList(data.spotters, qrz_com_url), qrz_com_url);
+    container.appendChild(spotCard);
+
 
   } catch (e) {
     container.innerHTML = `<div class="alert alert-danger" role="alert">

@@ -14,3 +14,26 @@
   font-size: 0.9rem;
   white-space: nowrap;      /* keep each callsign on one line */
 }
+
+.pill-list li a {
+  color: #0060aa;            /* Bootstrap primary colour */
+  text-decoration: none;     /* remove the underline */
+  font-weight: 500;          /* a little bolder than normal text */
+}
+
+/* Hover / focus state – subtle background shift */
+.pill-list li a:hover,
+.pill-list li a:focus {
+  color: #0a58ca;            /* darker on hover */
+  text-decoration: underline;/* optional – you can drop this line */
+}
+
+/* Active / visited – keep it readable */
+.pill-list li a:visited {
+  color: #6f42c1;            /* purple for visited links (optional) */
+}
+
+.pill-list li a {
+  display: inline-block;     /* expands the clickable area to fill the li */
+  width: 100%;
+}
