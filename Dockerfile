@@ -31,4 +31,4 @@ COPY --from=builder /app/target/release/ham-activity ./ham-activity
 
 EXPOSE 8080
 
-ENTRYPOINT ["./ham-activity"]
+ENTRYPOINT ["/app/ham-activity"]
