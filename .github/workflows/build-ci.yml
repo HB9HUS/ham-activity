@@ -85,10 +85,10 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          tags: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}
-          # We only push if PUSH_IMAGE == true
           push: ${{ env.PUSH_IMAGE == 'true' }}
-          # Optional: cache layers to speed up subsequent runs
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            ${{ startsWith(github.ref_name, 'v') && format('{0}:latest', env.IMAGE_NAME) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
