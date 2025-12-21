@@ -1,5 +1,5 @@
 use crate::bands::HF_BANDS;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use log::{debug, info};
 use std::collections::HashMap;
 use std::time::Duration;

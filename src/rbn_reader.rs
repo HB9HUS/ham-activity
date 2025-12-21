@@ -6,7 +6,6 @@ use chrono::LocalResult::Single;
 use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
 use log::{error, info, trace};
 use std::fs;
-use std::io::BufRead;
 use std::io::ErrorKind;
 
 struct SpotInfo {
@@ -119,9 +118,8 @@ async fn connect_read(shared_db: SharedDB, cfg: &config::RBNConfig) -> Result<()
     let mut line_buf = String::new();
     let mut timeout_counter = 0;
     loop {
-        line_buf.clear();
         // read_until stops at '\n'; Telnet lines end with "\r\n"
-        match rbn.read_line(&mut line_buf) {
+        match rbn.read_next_line(&mut line_buf) {
             Ok(0) => bail!("EOF"), // EOF
             Ok(_) => {
                 let line = line_buf.trim();

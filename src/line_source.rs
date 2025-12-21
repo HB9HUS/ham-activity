@@ -74,18 +74,6 @@ pub struct MockTelnet {
 
 impl MockTelnet {
     /// Build a mock from a static string (or any `&[u8]` you like).
-    pub fn from_bytes(data: &[u8]) -> Self {
-        let writer = Cursor::new(Vec::new());
-        // Clone the data for the reader side.
-        let reader_cursor = Cursor::new(data.to_vec());
-        let reader = BufReader::new(reader_cursor);
-        Self {
-            writer,
-            reader,
-            delay_per_read: Duration::ZERO,
-        }
-    }
-    /// Build a mock from a static string (or any `&[u8]` you like).
     /// adds the specified delay to each read to simulate the speed
     /// data is generated
     pub fn from_bytes_with_delay(data: &[u8], delay_per_read: Duration) -> Self {

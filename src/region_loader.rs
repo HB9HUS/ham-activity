@@ -14,42 +14,47 @@ pub struct Dxcc {
 
     /// ISO‑3166‑1 alpha‑2 country code (e.g. "CA")
     #[serde(rename = "countryCode")]
-    country_code: String,
+    _country_code: String,
 
     /// CQ zones that belong to the entity
     pub cq: Vec<u8>,
 
-    deleted: bool,
+    #[serde(rename = "deleted")]
+    _deleted: bool,
 
     #[serde(rename = "entityCode")]
-    entity_code: u32,
+    _entity_code: u32,
 
     /// Emoji flag – stored as a plain string
-    flag: String,
+    #[serde(rename = "flag")]
+    _flag: String,
 
     /// ITU regions that belong to the entity
-    itu: Vec<u8>,
+    #[serde(rename = "itu")]
+    _itu: Vec<u8>,
 
     pub name: String,
-    notes: String,
+
+    #[serde(rename = "notes")]
+    _notes: String,
 
     #[serde(rename = "outgoingQslService")]
-    outgoing_qsl_service: bool,
+    _outgoing_qsl_service: bool,
 
     /// Comma‑separated list of prefixes (e.g. "CF,CG,CH,…")
     pub prefix: String,
 
     #[serde(rename = "prefixRegex")]
-    prefix_regex: String,
+    _prefix_regex: String,
 
     #[serde(rename = "thirdPartyTraffic")]
-    third_party_traffic: bool,
+    _third_party_traffic: bool,
 
     #[serde(rename = "validEnd")]
     pub valid_end: String,
 
     #[serde(rename = "validStart")]
-    valid_start: String,
+    _valid_start: String,
 }
 
 pub fn load<P: AsRef<Path> + std::fmt::Display>(path: P) -> Result<Vec<Dxcc>> {
