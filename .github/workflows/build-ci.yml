@@ -17,7 +17,7 @@ env:
   # -----------------------------------------------------------------
   #  PUSH CONTROL – set to "true" to push, otherwise the job stops after build
   # -----------------------------------------------------------------
-  PUSH_IMAGE: ${{ secrets.PUSH_DOCKER_IMAGE || 'false' }}
+  PUSH_IMAGE: ${{ (github.ref_type == 'tag' && (secrets.PUSH_DOCKER_IMAGE || 'true')) || 'false' }}
 
 jobs:
   # ---------------------------------------------------------------
@@ -83,7 +83,9 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          tags: ${{ env.IMAGE_NAME }}:latest
+          tags: 
+            - ${{ env.IMAGE_NAME }}:latest
+            - ${{ env.IMAGE_NAME }}:${{ github.ref_name }}
           # We only push if PUSH_IMAGE == true
           push: ${{ env.PUSH_IMAGE == 'true' }}
           # Optional: cache layers to speed up subsequent runs
