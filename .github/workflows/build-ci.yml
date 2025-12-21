@@ -57,7 +57,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to registry (optional)
-        if: env.PUSH_IMAGE == 'false'
+        if: env.PUSH_IMAGE == 'true'
         # -----------------------------------------------------------------
         #   Choose ONE of the two login methods below:
         # -----------------------------------------------------------------
