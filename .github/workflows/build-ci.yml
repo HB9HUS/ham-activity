@@ -1,0 +1,95 @@
+name: Build-CI
+
+on:
+  push:
+    branches: [ main ]          # run on pushes to main
+  pull_request:
+    branches: [ main ]          # also run on PRs targeting main
+  workflow_dispatch:           # allow manual runs
+
+env:
+  # -----------------------------------------------------------------
+  #  IMAGE SETTINGS – change these to match your project
+  # -----------------------------------------------------------------
+  IMAGE_NAME: ghcr.io/${{ github.repository }}   # default: GHCR (GitHub Container Registry)
+  # If you want Docker Hub instead, set:
+  # IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/ham-activity
+  # -----------------------------------------------------------------
+  #  PUSH CONTROL – set to "true" to push, otherwise the job stops after build
+  # -----------------------------------------------------------------
+  PUSH_IMAGE: ${{ secrets.PUSH_DOCKER_IMAGE || 'false' }}
+
+jobs:
+  # ---------------------------------------------------------------
+  #  SECURITY SCAN (grype)
+  # ---------------------------------------------------------------
+  security-scan:
+    name: Security scan (grype)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Give exec permission to script
+        run: chmod +x ./scripts/grype_check.sh
+
+      - name: Run Grype scan
+        # The script must exit with a non‑zero code if any vuln is found.
+        # If it returns 0 the workflow continues, otherwise it fails.
+        run: ./scripts/grype_check.sh
+
+  # ---------------------------------------------------------------
+  #  BUILD DOCKER IMAGE
+  # ---------------------------------------------------------------
+  build-image:
+    name: Build Docker image
+    needs: security-scan                 # only runs if the scan succeeded
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read                     # needed for checkout
+      packages: write                    # needed for GHCR push (if enabled)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry (optional)
+        if: env.PUSH_IMAGE == 'false'
+        # -----------------------------------------------------------------
+        #   Choose ONE of the two login methods below:
+        # -----------------------------------------------------------------
+        # ① GitHub Container Registry (GHCR) – uses the default GITHUB_TOKEN
+        # -----------------------------------------------------------------
+        #   uses: docker/login-action@v3
+        #   with:
+        #     registry: ghcr.io
+        #     username: ${{ github.actor }}
+        #     password: ${{ secrets.GITHUB_TOKEN }}
+        #
+        # ② Docker Hub – requires DOCKER_USERNAME & DOCKER_PASSWORD secrets
+        # -----------------------------------------------------------------
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image
+        id: docker_build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: ${{ env.IMAGE_NAME }}:latest
+          # We only push if PUSH_IMAGE == true
+          push: ${{ env.PUSH_IMAGE == 'true' }}
+          # Optional: cache layers to speed up subsequent runs
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image digest (for reference)
+        if: env.PUSH_IMAGE == 'true'
+        run: echo "Image pushed with digest ${{ steps.docker_build.outputs.digest }}"
