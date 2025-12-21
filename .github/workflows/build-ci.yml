@@ -11,10 +11,9 @@ env:
   # -----------------------------------------------------------------
   #  IMAGE SETTINGS – change these to match your project
   # -----------------------------------------------------------------
-  IMAGE_NAME: ghcr.io/hb9hus/ham-activity
   # IMAGE_NAME: ghcr.io/${{ github.repository }}   # default: GHCR (GitHub Container Registry)
   # If you want Docker Hub instead, set:
-  # IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/ham-activity
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/ham-activity
   # -----------------------------------------------------------------
   #  PUSH CONTROL – set to "true" to push, otherwise the job stops after build
   # -----------------------------------------------------------------
