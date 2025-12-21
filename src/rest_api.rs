@@ -205,6 +205,6 @@ fn with_db(
 
 pub async fn serve(db: SharedDB) {
     let routes = routes(db);
-    info!("Server started at http://localhost:8000");
-    warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
+    info!("Server started at http://0.0.0.0:8000");
+    warp::serve(routes).run(([0, 0, 0, 0], 8000)).await;
 }
