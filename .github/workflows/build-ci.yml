@@ -11,7 +11,8 @@ env:
   # -----------------------------------------------------------------
   #  IMAGE SETTINGS – change these to match your project
   # -----------------------------------------------------------------
-  IMAGE_NAME: ghcr.io/${{ github.repository }}   # default: GHCR (GitHub Container Registry)
+  IMAGE_NAME: ghcr.io/hb9hus/ham-activity
+  # IMAGE_NAME: ghcr.io/${{ github.repository }}   # default: GHCR (GitHub Container Registry)
   # If you want Docker Hub instead, set:
   # IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/ham-activity
   # -----------------------------------------------------------------
@@ -37,10 +38,6 @@ jobs:
         # The script must exit with a non‑zero code if any vuln is found.
         # If it returns 0 the workflow continues, otherwise it fails.
         run: ./scripts/grype_check.sh
-
-      - name: downcase IMAGE_NAME
-        run: |
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
 
   # ---------------------------------------------------------------
   #  BUILD DOCKER IMAGE
