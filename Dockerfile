@@ -30,6 +30,6 @@ COPY --from=builder /app/target/release/ham-activity ./ham-activity
 RUN chown ${USER}:${USER} ham-activity
 
 USER ${USER}:${USER}
-EXPOSE 8080
+EXPOSE 8000
 
 ENTRYPOINT ["/app/ham-activity"]
