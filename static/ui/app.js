@@ -52,7 +52,7 @@ function makeList(arr, urlBase = null) {
   // ---- Determine region (fallback to CQ-14) ----
   const region = getQueryParam('region') || 'CQ_14';
   const {protocol, hostname, port} = window.location;
-  const apiUrl = `${protocol}//${hostname}${port ? ':' + port : ''}`;
+  const apiUrl = `${protocol}//${hostname}${port ? ':' + port : ''}/region/${encodeURIComponent(region)}`;
 
   try {
     const resp = await fetch(apiUrl);
