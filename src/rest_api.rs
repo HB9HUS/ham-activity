@@ -81,8 +81,14 @@ fn upser_call_info(spot: &spot_db::Spot, call_infos: &mut HashMap<String, CallIn
         std::collections::hash_map::Entry::Occupied(mut occ) => {
             let orig = occ.get_mut();
             orig.frequencies.push(spot.freq_khz);
+            orig.frequencies.sort_by(f64::total_cmp);
+            orig.frequencies.dedup();
             orig.wpm.push(spot.wpm);
+            orig.wpm.sort_unstable();
+            orig.wpm.dedup();
             orig.db.push(spot.snr_db);
+            orig.db.sort_unstable();
+            orig.db.dedup();
         }
         std::collections::hash_map::Entry::Vacant(vac) => {
             let info = CallInfo {
