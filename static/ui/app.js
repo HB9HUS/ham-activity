@@ -18,7 +18,7 @@ function hideLoading() {
 /* -------------------------------------------------------------
    Render helpers
    ------------------------------------------------------------- */
-function makeList(arr, urlBase = null) {
+function makeList(arr, urlBase = null, callInfoMap = null) {
   const ul = document.createElement('ul');
   ul.className = 'pill-list';
 
@@ -26,16 +26,35 @@ function makeList(arr, urlBase = null) {
     const li = document.createElement('li');
     li.className = 'list-group-item p-1';
 
+    // ---------- Build the visual content (link or plain text) ----------
     if (urlBase) {
-      // Build the full href – encode the item to keep URLs safe
       const a = document.createElement('a');
       a.href = urlBase + encodeURIComponent(item);
       a.textContent = item;
-      a.target = '_blank';          // open in a new tab (optional)
-      a.rel = 'noopener noreferrer';// security best practice
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
       li.appendChild(a);
     } else {
       li.textContent = item;
+    }
+
+    // ---------- Add mouse‑over tooltip if we have call‑info ----------
+    if (callInfoMap && Object.prototype.hasOwnProperty.call(callInfoMap, item)) {
+      const info = callInfoMap[item];   // { frequencies: [...], wpm: [...], db: [...] }
+
+      // Helper to turn an array into a comma‑separated string (or “‑” if empty)
+      const fmt = arr => (Array.isArray(arr) && arr.length) ? arr.join(', ') : '‑';
+
+      // Build a multi‑line tooltip – the newline characters are respected
+      // by most browsers when the `title` attribute is used.
+      const tooltip = [
+        `Frequencies: ${fmt(info.frequencies)} kHz`,
+        `WPM:        ${fmt(info.wpm)}`,
+        `dB:         ${fmt(info.db)}`
+      ].join('\n');
+
+      // Attach the tooltip to the <li> (or to the <a> if you prefer)
+      li.title = tooltip;
     }
 
     ul.appendChild(li);
@@ -78,7 +97,7 @@ function makeList(arr, urlBase = null) {
   
     freqCard.innerHTML = `
     <div id="freq-widget" class="card mb-3">
-      <div class="card-header fw-bold">Frequency lookup</div>
+      <div class="card-header fw-bold">Frequency lookup (+/- 200Hz)</div>
     
       <div class="card-body d-flex flex-column flex-sm-row align-items-sm-center gap-2">
         <input id="freq-input"
@@ -207,7 +226,7 @@ function makeList(arr, urlBase = null) {
       tr.appendChild(th);
       data.band_activities.forEach(b => {
         const td = document.createElement('td');
-        td.appendChild(makeList(accessor(b), qrz_com_url));
+        td.appendChild(makeList(accessor(b), qrz_com_url, data.call_info));
         tr.appendChild(td);
       });
       tbody.appendChild(tr);

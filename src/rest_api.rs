@@ -66,6 +66,33 @@ pub struct Region {
     pub spotters: Vec<String>,
     pub num_spotter_spots: usize,
     pub band_activities: Vec<BandActivity>,
+    pub call_info: HashMap<String, CallInfo>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct CallInfo {
+    pub frequencies: Vec<f64>,
+    pub wpm: Vec<u32>,
+    pub db: Vec<i32>,
+}
+
+fn upser_call_info(spot: &spot_db::Spot, call_infos: &mut HashMap<String, CallInfo>) {
+    match call_infos.entry(spot.spotted.clone()) {
+        std::collections::hash_map::Entry::Occupied(mut occ) => {
+            let orig = occ.get_mut();
+            orig.frequencies.push(spot.freq_khz);
+            orig.wpm.push(spot.wpm);
+            orig.db.push(spot.snr_db);
+        }
+        std::collections::hash_map::Entry::Vacant(vac) => {
+            let info = CallInfo {
+                frequencies: vec![spot.freq_khz],
+                wpm: vec![spot.wpm],
+                db: vec![spot.snr_db],
+            };
+            vac.insert(info);
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
@@ -83,12 +110,13 @@ async fn get_region(
     debug!("--> get_db_region");
     let db = shared_db.read();
     if let Some(r) = db.get_region(&name) {
-        let (band_activities, spotters) = get_band_activities(r);
+        let (band_activities, spotters, call_info) = get_band_activities(r);
         let region = Region {
             name,
             spotters,
             num_spotter_spots: r.spotter_spots.len(),
             band_activities,
+            call_info,
         };
         Ok(warp::reply::json(&region))
     } else {
@@ -96,10 +124,13 @@ async fn get_region(
     }
 }
 
-fn get_band_activities(region: &spot_db::Region) -> (Vec<BandActivity>, Vec<String>) {
+fn get_band_activities(
+    region: &spot_db::Region,
+) -> (Vec<BandActivity>, Vec<String>, HashMap<String, CallInfo>) {
     debug!("--> get_band_activity");
     let mut band_activity = HashMap::new();
     let mut spotters = Vec::new();
+    let mut call_info = HashMap::new();
     for band in HF_BANDS {
         band_activity.insert(
             band.name.to_string(),
@@ -118,12 +149,17 @@ fn get_band_activities(region: &spot_db::Region) -> (Vec<BandActivity>, Vec<Stri
                     .expect("initialized hashmap is missing entry!");
                 if Utc::now() - Duration::from_secs(60) < spot.timestamp {
                     ba.active_1min.push(spot.spotted.clone());
+                    upser_call_info(&spot, &mut call_info);
+                    continue; // only list the newest spot, ignore 5 and 15min
                 }
                 if Utc::now() - Duration::from_secs(5 * 60) < spot.timestamp {
                     ba.active_5min.push(spot.spotted.clone());
+                    upser_call_info(&spot, &mut call_info);
+                    continue; // ignore 15min
                 }
                 if Utc::now() - Duration::from_secs(15 * 60) < spot.timestamp {
                     ba.active_15min.push(spot.spotted.clone());
+                    upser_call_info(&spot, &mut call_info);
                 }
             }
         }
@@ -147,6 +183,7 @@ fn get_band_activities(region: &spot_db::Region) -> (Vec<BandActivity>, Vec<Stri
             })
             .collect(),
         spotters,
+        call_info,
     )
 }
 

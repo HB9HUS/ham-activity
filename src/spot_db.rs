@@ -14,8 +14,8 @@ pub struct Spot {
     pub spotted: String, // spotted callsign
     pub freq_khz: f64,   // frequency in kHz (or MHz – whatever the cluster reports)
     mode: String,        // CW, SSB, FT8 …
-    snr_db: i32,         // signal‑to‑noise ratio, dB
-    wpm: u32,            // words‑per‑minute
+    pub snr_db: i32,     // signal‑to‑noise ratio, dB
+    pub wpm: u32,        // words‑per‑minute
     msg: String,         // usually "CQ"
     pub timestamp: DateTime<Utc>,
 }
