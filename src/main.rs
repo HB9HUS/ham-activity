@@ -7,6 +7,8 @@ use std::thread;
 use std::time::Duration;
 use tokio::spawn;
 
+use rest_api::serve;
+
 mod bands;
 mod config;
 mod line_source;
@@ -103,7 +105,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     load_regions(shared_db.clone(), regions);
 
-    spawn(rest_api::serve(shared_db.clone()));
+    spawn(serve(shared_db.clone()));
     spawn(periodic_cleaner(shared_db.clone(), cfg.db));
     rbn_reader::read_rbn(shared_db.clone(), cfg.rbn).await?;
 
