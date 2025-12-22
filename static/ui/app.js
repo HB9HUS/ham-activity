@@ -54,22 +54,124 @@ function makeList(arr, urlBase = null) {
   const {protocol, hostname, port} = window.location;
   const apiUrl = `${protocol}//${hostname}${port ? ':' + port : ''}/region/${encodeURIComponent(region)}`;
 
+  let data;
   try {
     const resp = await fetch(apiUrl);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
+    data = await resp.json();
+  } catch (e) {
+    container.innerHTML = `<div class="alert alert-danger" role="alert">
+      Failed to load data for region “${region}”: ${e.message}
+    </div>`;
+    return;
+  }
+    $("title").text(`Region: ${region}`);
+    $("h1").text(`Region: ${region}`);
 
     const qrz_com_url ='https://qrz.com/db/'
 
     hideLoading();
 
-    /* ----- Region name ----- */
-    const nameCard = document.createElement('div');
-    nameCard.className = 'card mb-3';
-    nameCard.innerHTML = `
-      <div class="card-header fw-bold">Region</div>
-      <div class="card-body"><p class="card-text">${data.name || '‑'}</p></div>`;
-    container.appendChild(nameCard);
+    /* ----- Frequency lookup ----- */
+    const freqCard = document.createElement('div');
+    freqCard.className = 'card mb-3';
+  
+    freqCard.innerHTML = `
+    <div id="freq-widget" class="card mb-3">
+      <div class="card-header fw-bold">Frequency lookup</div>
+    
+      <div class="card-body d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+        <input id="freq-input"
+               type="number"
+               step="0.1"
+               min="0"
+               class="form-control flex-grow-1"
+               placeholder="e.g. 7016.5"
+               aria-label="Frequency in kilohertz">
+    
+        <button id="freq-btn" class="btn btn-primary">Lookup</button>
+    
+        <div id="freq-spinner"
+             class="spinner-border spinner-border-sm text-primary d-none"
+             role="status"
+             aria-hidden="true"></div>
+      </div>
+    
+      <div id="freq-result" class="card-body border-top pt-3"></div>
+    </div>
+  `;
+  
+   container.appendChild(freqCard);
+
+  $(function () {
+    const $input   = $('#freq-input');
+    const $button  = $('#freq-btn');
+    const $spinner = $('#freq-spinner');
+    const $result  = $('#freq-result');
+
+    // Helper: show / hide the spinner
+    const showSpinner = () => $spinner.removeClass('d-none');
+    const hideSpinner = () => $spinner.addClass('d-none');
+
+    // Helper: render a simple <ul> of callsigns
+    const renderCalls = calls => {
+      if (!calls.length) {
+        $result.html('<p class="text-muted mb-0">No callsigns found.</p>');
+        return;
+      }
+      const $ul = $('<ul>').addClass('pill-list list-group list-group-flush');
+      calls.forEach(cs => $ul.append($('<li>').addClass('list-group-item p-1').text(cs)));
+      $result.empty().append($ul);
+    };
+
+    // Main click handler
+    $button.on('click', async () => {
+      const raw = $input.val().trim();
+
+      // ---- basic validation -------------------------------------------------
+      if (!raw || isNaN(raw) || Number(raw) <= 0) {
+        $result.html(`
+          <div class="alert alert-warning mb-0" role="alert">
+            Please enter a valid frequency in kHz.
+          </div>`);
+        return;
+      }
+
+      // ---- kHz → Hz ---------------------------------------------------------
+      const hz = Math.round(Number(raw) * 1000); // e.g. 7016.5 → 7016500
+
+      // ---- build absolute URL (same origin) ---------------------------------
+      const { protocol, hostname, port } = window.location;
+      const base = `${protocol}//${hostname}${port ? ':' + port : ''}`;
+      const url  = `${base}/frequency/${hz}`;
+
+      try {
+        showSpinner();
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+        const data = await resp.json(); // { callsigns: [...] }
+        const calls = Array.isArray(data.callsigns) ? data.callsigns : [];
+        renderCalls(calls);
+      } catch (e) {
+        console.error(e);
+        $result.html(`
+          <div class="alert alert-danger mb-0" role="alert">
+            Failed to load callsigns: ${e.message}
+          </div>`);
+      } finally {
+        hideSpinner();
+      }
+    });
+
+    // ---- Press Enter while the input is focused ----------------------------
+    $input.on('keypress', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        $button.trigger('click');
+      }
+    });
+  });
 
     /* ----- Band activities matrix (Bootstrap table) ----- */
     const bandCard = document.createElement('div');
@@ -127,11 +229,4 @@ function makeList(arr, urlBase = null) {
       <div class="card-body"></div>`;
     spotCard.querySelector('.card-body').appendChild(makeList(data.spotters, qrz_com_url), qrz_com_url);
     container.appendChild(spotCard);
-
-
-  } catch (e) {
-    container.innerHTML = `<div class="alert alert-danger" role="alert">
-      Failed to load data for region “${region}”: ${e.message}
-    </div>`;
-  }
 })();
