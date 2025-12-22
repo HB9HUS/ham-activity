@@ -48,7 +48,7 @@ function makeList(arr, urlBase = null, callInfoMap = null) {
       // Build a multi‑line tooltip – the newline characters are respected
       // by most browsers when the `title` attribute is used.
       const tooltip = [
-        `Frequencies: ${fmt(info.frequencies)} kHz`,
+        `Freq: ${fmt(info.frequencies)} kHz`,
         `WPM:        ${fmt(info.wpm)}`,
         `dB:         ${fmt(info.db)}`
       ].join('\n');
