@@ -171,6 +171,8 @@ impl SpotDB {
         }
     }
 
+    // refactor another time
+    #[allow(clippy::too_many_arguments)]
     pub fn add_spot(
         &mut self,
         spotter: &str,
@@ -259,8 +261,7 @@ mod tests {
 
     #[fixture]
     fn empty_db() -> SpotDB {
-        let db = SpotDB::new();
-        db
+        SpotDB::new()
     }
 
     #[rstest]
