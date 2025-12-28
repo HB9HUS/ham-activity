@@ -47,7 +47,7 @@ fn load_regions(shared_db: spot_db::SharedDB, regions: Vec<region_loader::Dxcc>)
     let mut db = shared_db.write();
     for region in &regions {
         // any dxcc that has validEnd set is not relevant for us
-        if region.valid_end.len() > 0 {
+        if !region.valid_end.is_empty() {
             continue;
         }
         let prefixes: Vec<String> = region.prefix.split(",").map(|s| s.to_string()).collect();
