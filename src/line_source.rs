@@ -55,7 +55,7 @@ impl io::Read for RealTelnet {
 }
 impl LineSource for RealTelnet {
     fn send_callsign(&mut self, callsign: &str) -> io::Result<()> {
-        let cs = format!("{}\r\n", callsign);
+        let cs = format!("{callsign}\r\n");
         self.stream.write_all(cs.as_bytes())?;
         self.stream.flush()
     }

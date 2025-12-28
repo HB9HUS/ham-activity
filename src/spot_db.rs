@@ -60,10 +60,10 @@ impl Region {
             self.spotter_spots.push(spot);
         }
     }
-    pub fn remove_spots(&mut self, spots: &Vec<Arc<Spot>>) {
-        spots
-            .iter()
-            .for_each(|remove_spot| self.spotter_spots.retain(|s| *s != *remove_spot));
+    pub fn remove_spots(&mut self, spots: &[Arc<Spot>]) {
+        for remove_spot in spots {
+            self.spotter_spots.retain(|s| *s != *remove_spot);
+        }
     }
     pub fn get_band_activities(
         &self,
@@ -211,11 +211,11 @@ impl SpotDB {
             .iter_mut()
             .for_each(|(_, r)| r.remove_spots(&expired));
         // sanity check
-        expired.iter().for_each(|e| {
-            if Arc::strong_count(e) > 1 {
-                error!("Bug in cleanup somewhere! Arc::strong_count > 1 after delete!")
+        for e in expired {
+            if Arc::strong_count(&e) > 1 {
+                error!("Bug in cleanup somewhere! Arc::strong_count > 1 after delete!");
             }
-        })
+        }
     }
 
     pub fn spots_in_db(&self) -> usize {
@@ -236,7 +236,7 @@ impl SpotDB {
     }
 
     pub fn get_regions(&self) -> Vec<&Region> {
-        self.regions.iter().map(|(_, r)| r).collect()
+        self.regions.values().collect()
     }
 
     pub fn get_frequency_users(&self, freq_khz: f64) -> Vec<String> {

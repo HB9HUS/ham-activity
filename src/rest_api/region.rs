@@ -1,6 +1,5 @@
 use log::debug;
 use std::collections::HashMap;
-use warp;
 
 use crate::spot_db;
 use crate::spot_db::SharedDB;

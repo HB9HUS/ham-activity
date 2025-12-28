@@ -21,7 +21,7 @@ struct SpotInfo {
 
 pub fn parse_hhmmz_to_utc(hhmmz: &str) -> Result<DateTime<Utc>> {
     if hhmmz.len() != 5 {
-        bail!("String malformed, expect hhmmz, got {}", hhmmz);
+        bail!("String malformed, expect hhmmz, got {hhmmz}");
     }
     let hr = hhmmz[0..2]
         .parse()
@@ -54,11 +54,11 @@ fn parse_spot_split(line: &str) -> Result<SpotInfo> {
         let p = parts
             .next()
             .ok_or(anyhow! {"expected part, found nothing"})?;
-        return match want {
+        match want {
             Some(wp) if p == wp => Ok(p),
             None => Ok(p),
             Some(wp) => bail!("expected {wp} found {p}"),
-        };
+        }
     };
 
     get_part(Some("DX"))?;
@@ -143,7 +143,6 @@ async fn connect_read(shared_db: SharedDB, cfg: &config::RBNConfig) -> Result<()
                         bail!("telnet connection exceeded max timeouts");
                     }
                     timeout_counter += 1;
-                    continue;
                 }
                 _ => bail!("read error: {e}"),
             },
@@ -154,7 +153,7 @@ async fn connect_read(shared_db: SharedDB, cfg: &config::RBNConfig) -> Result<()
 pub async fn read_rbn(shared_db: SharedDB, cfg: config::RBNConfig) -> Result<()> {
     loop {
         match connect_read(shared_db.clone(), &cfg).await {
-            Ok(_) => error!("recieved Ok from connect read, should never happen!"),
+            Ok(()) => error!("recieved Ok from connect read, should never happen!"),
             Err(e) if format!("{e}") == "EOF" => info!("got EOF, reconnecting"),
             Err(e) => info!("got {e}, reconnecting"),
         }

@@ -3,7 +3,6 @@ use clap::Parser;
 use log::{debug, error, info};
 use std::path::PathBuf;
 use std::process;
-use std::thread;
 use std::time::Duration;
 use tokio::spawn;
 
@@ -36,27 +35,27 @@ async fn periodic_cleaner(shared_db: spot_db::SharedDB, db_cfg: config::DBConfig
     let cleanup_period = Duration::from_secs(db_cfg.cleanup_period_secs);
     let max_spot_age = Duration::from_secs(db_cfg.max_spot_age_secs);
     loop {
-        thread::sleep(cleanup_period);
+        tokio::time::sleep(cleanup_period).await;
         info!("running periodic cleaner");
         let mut db = shared_db.write();
         db.cleanup_old_spots(max_spot_age);
         info!("finished periodic cleaner");
     }
 }
-fn load_regions(shared_db: spot_db::SharedDB, regions: Vec<region_loader::Dxcc>) {
+fn load_regions(shared_db: &spot_db::SharedDB, regions: &[region_loader::Dxcc]) {
     let mut db = shared_db.write();
-    for region in &regions {
+    for region in regions {
         // any dxcc that has validEnd set is not relevant for us
         if !region.valid_end.is_empty() {
             continue;
         }
-        let prefixes: Vec<String> = region.prefix.split(",").map(|s| s.to_string()).collect();
+        let prefixes: Vec<String> = region
+            .prefix
+            .split(',')
+            .map(std::string::ToString::to_string)
+            .collect();
         db.add_region(
-            region
-                .name
-                .to_lowercase()
-                .replace(char::is_whitespace, "_")
-                .to_string(),
+            region.name.to_lowercase().replace(char::is_whitespace, "_"),
             prefixes.clone(),
         );
         for cq in region.cq.clone() {
@@ -90,7 +89,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut cfg = match config::load_config(&cli.config) {
         Ok(cfg) => cfg,
         Err(e) => {
-            error!("could not load config: {}", e);
+            error!("could not load config: {e}");
             process::exit(1)
         }
     };
@@ -98,12 +97,12 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         cfg.rbn.enable_test = true;
     }
     env_logger::init();
-    debug!("{:#?}", cfg);
+    debug!("{cfg:#?}");
 
     let shared_db = shared::Shared::new(spot_db::SpotDB::new());
     let regions = region_loader::load(cfg.region_file)?;
 
-    load_regions(shared_db.clone(), regions);
+    load_regions(&shared_db.clone(), &regions);
 
     spawn(serve(shared_db.clone()));
     spawn(periodic_cleaner(shared_db.clone(), cfg.db));

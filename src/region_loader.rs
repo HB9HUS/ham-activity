@@ -9,14 +9,14 @@ struct DxccRoot {
 
 #[derive(Debug, Deserialize)]
 pub struct Dxcc {
-    /// Example: ["NA"]
+    // Example: ["NA"]
     pub continent: Vec<String>,
 
-    /// ISO‑3166‑1 alpha‑2 country code (e.g. "CA")
+    // ISO‑3166‑1 alpha‑2 country code (e.g. "CA")
     #[serde(rename = "countryCode")]
     _country_code: String,
 
-    /// CQ zones that belong to the entity
+    // CQ zones that belong to the entity
     pub cq: Vec<u8>,
 
     #[serde(rename = "deleted")]
@@ -25,11 +25,11 @@ pub struct Dxcc {
     #[serde(rename = "entityCode")]
     _entity_code: u32,
 
-    /// Emoji flag – stored as a plain string
+    // Emoji flag – stored as a plain string
     #[serde(rename = "flag")]
     _flag: String,
 
-    /// ITU regions that belong to the entity
+    // ITU regions that belong to the entity
     #[serde(rename = "itu")]
     _itu: Vec<u8>,
 
@@ -41,7 +41,7 @@ pub struct Dxcc {
     #[serde(rename = "outgoingQslService")]
     _outgoing_qsl_service: bool,
 
-    /// Comma‑separated list of prefixes (e.g. "CF,CG,CH,…")
+    // Comma‑separated list of prefixes (e.g. "CF,CG,CH,…")
     pub prefix: String,
 
     #[serde(rename = "prefixRegex")]

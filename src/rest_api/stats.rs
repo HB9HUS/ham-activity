@@ -1,5 +1,4 @@
 use log::debug;
-use warp;
 
 use crate::spot_db::SharedDB;
 
@@ -7,8 +6,9 @@ use serde::{Deserialize, Serialize};
 
 pub async fn get_db_stats(shared_db: SharedDB) -> Result<impl warp::Reply, warp::Rejection> {
     debug!("--> get_db_stats");
-    let db = shared_db.read();
     const FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+
+    let db = shared_db.read();
     let start_time = format!("{}", db.init_timestamp.format(FORMAT));
     let stats = DBStats {
         running_since: start_time,

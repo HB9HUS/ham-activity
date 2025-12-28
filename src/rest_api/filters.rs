@@ -2,7 +2,6 @@ use super::region::{get_frequency, get_region, get_regions};
 use super::stats::get_db_stats;
 use crate::spot_db::SharedDB;
 use log::info;
-use warp;
 use warp::Filter;
 
 fn get_frequency_route(
