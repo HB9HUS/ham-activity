@@ -196,8 +196,13 @@ function makeList(arr, urlBase = null, callInfoMap = null) {
     const bandCard = document.createElement('div');
     bandCard.className = 'card mb-3';
     bandCard.innerHTML = `<div class="card-header fw-bold">Band Activities - Total Spots: ${data.num_spotter_spots ?? '‑'}</div>`;
+
+    const tableResponsive = document.createElement('div');
+    tableResponsive.className = 'table-responsive';
+
     const table = document.createElement('table');
-    table.className = 'table table-sm table-striped text-center align-middle matrix';
+    table.className = 'table table-sm table-striped text-center align-middle matrix mb-0';
+
     const thead = document.createElement('thead');
     const headTr = document.createElement('tr');
 
@@ -237,8 +242,8 @@ function makeList(arr, urlBase = null, callInfoMap = null) {
     addRow('15 min', b => b.active_15min);
 
     table.appendChild(tbody);
-    bandCard.appendChild(table);
-    container.appendChild(bandCard);
+    tableResponsive.appendChild(table);
+    bandCard.appendChild(tableResponsive);
 
     /* ----- Spotters ----- */
     const spotCard = document.createElement('div');
