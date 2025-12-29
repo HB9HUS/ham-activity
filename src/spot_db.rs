@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+use uom::si::f64::Frequency;
+use uom::si::frequency::kilohertz;
 
 pub type SharedDB = shared::Shared<SpotDB>;
 
@@ -14,11 +16,11 @@ pub type SharedDB = shared::Shared<SpotDB>;
 pub struct Spot {
     pub spotter: String, // e.g. "G4IRN"
     pub spotted: String, // spotted callsign
-    pub freq_khz: f64,   // frequency in kHz (or MHz – whatever the cluster reports)
-    mode: String,        // CW, SSB, FT8 …
-    pub snr_db: i32,     // signal‑to‑noise ratio, dB
-    pub wpm: u32,        // words‑per‑minute
-    msg: String,         // usually "CQ"
+    pub freq: Frequency,
+    mode: String,    // CW, SSB, FT8 …
+    pub snr_db: i32, // signal‑to‑noise ratio, dB
+    pub wpm: u32,    // words‑per‑minute
+    msg: String,     // usually "CQ"
     pub timestamp: DateTime<Utc>,
 }
 
@@ -84,7 +86,7 @@ impl Region {
         for spot in self.spotter_spots.clone() {
             spotters.push(spot.spotter.clone());
             for band in HF_BANDS {
-                if band.lower_khz <= spot.freq_khz && spot.freq_khz <= band.upper_khz {
+                if band.lower <= spot.freq && spot.freq <= band.upper {
                     let ba = band_activity
                         .get_mut(band.name)
                         .expect("initialized hashmap is missing entry!");
@@ -133,7 +135,7 @@ fn upser_call_info(spot: &Spot, call_infos: &mut HashMap<String, CallInfo>) {
     match call_infos.entry(spot.spotted.clone()) {
         std::collections::hash_map::Entry::Occupied(mut occ) => {
             let orig = occ.get_mut();
-            orig.frequencies.push(spot.freq_khz);
+            orig.frequencies.push(spot.freq.get::<kilohertz>());
             orig.frequencies.sort_by(f64::total_cmp);
             orig.frequencies.dedup();
             orig.wpm.push(spot.wpm);
@@ -145,7 +147,7 @@ fn upser_call_info(spot: &Spot, call_infos: &mut HashMap<String, CallInfo>) {
         }
         std::collections::hash_map::Entry::Vacant(vac) => {
             let info = CallInfo {
-                frequencies: vec![spot.freq_khz],
+                frequencies: vec![spot.freq.get::<kilohertz>()],
                 wpm: vec![spot.wpm],
                 db: vec![spot.snr_db],
             };
@@ -177,7 +179,7 @@ impl SpotDB {
         &mut self,
         spotter: &str,
         spotted: &str,
-        freq_khz: f64,
+        freq: Frequency,
         mode: &str,
         snr_db: i32,
         wpm: u32,
@@ -187,7 +189,7 @@ impl SpotDB {
         let spot = Spot {
             spotter: spotter.to_string(),
             spotted: spotted.to_string(),
-            freq_khz,
+            freq,
             mode: mode.to_string(),
             snr_db,
             wpm,
@@ -241,11 +243,12 @@ impl SpotDB {
         self.regions.values().collect()
     }
 
-    pub fn get_frequency_users(&self, freq_khz: f64) -> Vec<String> {
+    pub fn get_frequency_users(&self, freq: Frequency) -> Vec<String> {
+        let delta_f = Frequency::new::<kilohertz>(0.2);
         let mut callsigns: Vec<String> = self
             .spots
             .iter()
-            .filter(|&s| (freq_khz + 0.2) >= s.freq_khz && (freq_khz - 0.2) <= s.freq_khz)
+            .filter(|&s| (freq + delta_f) >= s.freq && (freq - delta_f) <= s.freq)
             .map(|s| s.spotted.clone())
             .collect();
         callsigns.sort_unstable();
@@ -258,6 +261,7 @@ impl SpotDB {
 mod tests {
     use super::*;
     use rstest::{fixture, rstest};
+    use uom::si::frequency::kilohertz;
 
     #[fixture]
     fn empty_db() -> SpotDB {
@@ -272,14 +276,16 @@ mod tests {
 
     #[rstest]
     fn db_add_spot(mut empty_db: SpotDB) {
-        empty_db.add_spot("HB9HUS", "HB9CL", 18080.0, "CW", 10, 25, "CQ", Utc::now());
+        let f = Frequency::new::<kilohertz>(18080.0);
+        empty_db.add_spot("HB9HUS", "HB9CL", f, "CW", 10, 25, "CQ", Utc::now());
         assert_eq!(empty_db.spots_in_db(), 1);
     }
 
     #[rstest]
     fn db_cleanup(mut empty_db: SpotDB) {
         let earlier = Utc::now() - Duration::from_secs(3600);
-        empty_db.add_spot("HB9HUS", "HB9CL", 18080.0, "CW", 10, 25, "CQ", earlier);
+        let f = Frequency::new::<kilohertz>(18080.0);
+        empty_db.add_spot("HB9HUS", "HB9CL", f, "CW", 10, 25, "CQ", earlier);
         empty_db.cleanup_old_spots(Duration::from_secs(1000));
         assert_eq!(empty_db.spots_in_db(), 0);
     }
@@ -299,7 +305,8 @@ mod tests {
     fn db_add_spot_to_region(mut empty_db: SpotDB) {
         let prefixes = vec!["HB".to_string(), "DL".to_string(), "F".to_string()];
         empty_db.add_region("europe".to_string(), prefixes);
-        empty_db.add_spot("HB9HUS", "DL1ABC", 18080.0, "CW", 10, 25, "CQ", Utc::now());
+        let f = Frequency::new::<kilohertz>(18080.0);
+        empty_db.add_spot("HB9HUS", "DL1ABC", f, "CW", 10, 25, "CQ", Utc::now());
         let r = empty_db.get_region("europe");
         if let Some(reg) = r {
             assert_eq!(reg.spotter_spots.len(), 1)

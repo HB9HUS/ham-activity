@@ -7,10 +7,12 @@ use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
 use log::{error, info, trace};
 use std::fs;
 use std::io::ErrorKind;
+use uom::si::f64::Frequency;
+use uom::si::frequency::kilohertz;
 
 struct SpotInfo {
     spotter: String,
-    freq_khz: f64,
+    freq: Frequency,
     spotted: String,
     mode: String,
     snr_db: i32,
@@ -71,6 +73,7 @@ fn parse_spot_split(line: &str) -> Result<SpotInfo> {
         .to_string();
 
     let freq_khz: f64 = get_part(None)?.parse()?;
+    let freq = Frequency::new::<kilohertz>(freq_khz);
     let spotted = get_part(None)?.to_string();
     let mode = get_part(None)?.to_string();
     let snr_db: i32 = get_part(None)?.parse()?;
@@ -89,7 +92,7 @@ fn parse_spot_split(line: &str) -> Result<SpotInfo> {
 
     Ok(SpotInfo {
         spotter,
-        freq_khz,
+        freq,
         spotted,
         mode,
         snr_db,
@@ -128,7 +131,7 @@ async fn connect_read(shared_db: SharedDB, cfg: &config::RBNConfig) -> Result<()
                         trace!("parsed: {line}");
                         let mut db = shared_db.write();
                         db.add_spot(
-                            &s.spotter, &s.spotted, s.freq_khz, &s.mode, s.snr_db, s.wpm, &s.msg,
+                            &s.spotter, &s.spotted, s.freq, &s.mode, s.snr_db, s.wpm, &s.msg,
                             s.utc_time,
                         );
                     }

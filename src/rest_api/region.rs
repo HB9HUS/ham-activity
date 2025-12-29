@@ -1,5 +1,7 @@
 use log::debug;
 use std::collections::HashMap;
+use uom::si::f64::Frequency;
+use uom::si::frequency::hertz;
 
 use crate::spot_db;
 use crate::spot_db::SharedDB;
@@ -28,7 +30,7 @@ pub async fn get_region(
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Frequency {
+pub struct FrequencyInfo {
     pub callsigns: Vec<String>,
 }
 
@@ -38,9 +40,9 @@ pub async fn get_frequency(
 ) -> Result<impl warp::Reply, warp::Rejection> {
     debug!("--> get_frequency");
     let db = shared_db.read();
-    let freq_khz = (freq_hz as f64) / 1000.0;
-    let callsigns = db.get_frequency_users(freq_khz);
-    Ok(warp::reply::json(&Frequency { callsigns }))
+    let freq = Frequency::new::<hertz>(freq_hz as f64);
+    let callsigns = db.get_frequency_users(freq);
+    Ok(warp::reply::json(&FrequencyInfo { callsigns }))
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
